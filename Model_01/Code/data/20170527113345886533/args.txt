@@ -1,0 +1,1 @@
+{"profile": false, "load": "", "weight_decay": 0.0, "rom": "space_invaders", "demo": false, "n_process": 2, "lr": 0.0007, "eval_n_runs": 10, "beta": 0.01, "seed": null, "steps": 8000000, "eval_frequency": 1000000, "use_sdl": true, "gpu": -1, "t_max": 10, "max_episode_len": 10000, "input_action": false, "skip_P": false, "outdir": "./data"}
