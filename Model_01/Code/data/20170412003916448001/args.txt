@@ -1,0 +1,1 @@
+{"load": null, "rom": "pong", "demo": false, "activation": "relu", "target_update_frequency": 10000, "eval_n_runs": 10, "agent": "DQN", "eval_frequency": 100000, "seed": null, "steps": 10000000, "update_frequency": 4, "replay_start_size": 50000, "use_sdl": true, "gpu": 0, "final_exploration_frames": 1000000, "arch": "sis", "clip_delta": true, "outdir": "./data"}

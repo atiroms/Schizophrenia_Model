@@ -1,0 +1,1 @@
+{"profile": false, "load": "", "processes": 6, "weight_decay": 0.0, "rom": "pong", "demo": false, "eval_n_runs": 10, "beta": 0.01, "seed": null, "steps": 8000000, "eval_frequency": 1000000, "use_sdl": true, "lr": 0.0007, "t_max": 5, "max_episode_len": 10000, "outdir": "./data"}
