@@ -5,7 +5,8 @@
 
 gamma = .8 # discount rate for advantage estimation and reward discounting
 a_size = 2 # Agent can move Left, Right, or Fire
-load_model = True
+#load_model = True
+load_model = False
 train = False
 model_path = './model_meta'
 
@@ -23,7 +24,7 @@ from pillow import Image
 from pillow import ImageDraw 
 from pillow import ImageFont
 # %matplotlib inline
-# from helper import *
+from helper import *
 
 from random import choice
 from time import sleep
@@ -206,7 +207,7 @@ class Worker():
     def work(self,gamma,sess,coord,saver,train):
         episode_count = sess.run(self.global_episodes)
         total_steps = 0
-        print "Starting worker " + str(self.number)
+        print("Starting worker " + str(self.number))
         with sess.as_default(), sess.graph.as_default():                 
             while not coord.should_stop():
                 sess.run(self.update_local_ops)
@@ -256,7 +257,7 @@ class Worker():
                 if episode_count % 50 == 0 and episode_count != 0:
                     if episode_count % 500 == 0 and self.name == 'worker_0' and train == True:
                         saver.save(sess,self.model_path+'/model-'+str(episode_count)+'.cptk')
-                        print "Saved Model"
+                        print("Saved Model")
 
                     if episode_count % 100 == 0 and self.name == 'worker_0':
                         self.images = np.array(episode_frames)
@@ -294,7 +295,7 @@ if not os.path.exists(model_path):
 if not os.path.exists('./frames'):
     os.makedirs('./frames')
 
-    
+
 with tf.device("/cpu:0"): 
     global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)
     trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
@@ -307,10 +308,11 @@ with tf.device("/cpu:0"):
         workers.append(Worker(dependent_bandit('uniform'),i,a_size,trainer,model_path,global_episodes))
     saver = tf.train.Saver(max_to_keep=5)
 
+
 with tf.Session() as sess:
     coord = tf.train.Coordinator()
     if load_model == True:
-        print 'Loading Model...'
+        print('Loading Model...')
         ckpt = tf.train.get_checkpoint_state(model_path)
         saver.restore(sess,ckpt.model_checkpoint_path)
     else:
@@ -323,3 +325,4 @@ with tf.Session() as sess:
         thread.start()
         worker_threads.append(thread)
     coord.join(worker_threads)
+
