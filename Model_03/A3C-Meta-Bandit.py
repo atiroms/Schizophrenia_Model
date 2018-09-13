@@ -7,12 +7,14 @@ gamma = .8 # discount rate for advantage estimation and reward discounting
 a_size = 2 # Agent can move Left, Right, or Fire
 #load_model = True
 load_model = False
-train = False
+#train = False
+train = True
 model_path = './model_meta'
 
 
 # Libraries
 
+import os
 import threading
 import multiprocessing
 import numpy as np
@@ -20,9 +22,9 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import scipy.signal
-from pillow import Image
-from pillow import ImageDraw 
-from pillow import ImageFont
+from PIL import Image
+from PIL import ImageDraw 
+from PIL import ImageFont
 # %matplotlib inline
 from helper import *
 
@@ -262,8 +264,8 @@ class Worker():
                     if episode_count % 100 == 0 and self.name == 'worker_0':
                         self.images = np.array(episode_frames)
                         make_gif(self.images,'./frames/image'+str(episode_count)+'.gif',
-                            duration=len(self.images)*0.1,true_image=True,salience=False)
-
+#                            duration=len(self.images)*0.1,true_image=True,salience=False)
+                            duration=len(self.images)*0.1,true_image=True)
                     mean_reward = np.mean(self.episode_rewards[-50:])
                     mean_length = np.mean(self.episode_lengths[-50:])
                     mean_value = np.mean(self.episode_mean_values[-50:])

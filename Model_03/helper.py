@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import math
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import scipy.misc
@@ -7,9 +8,9 @@ import os
 import csv
 import itertools
 import tensorflow.contrib.slim as slim
-from pillow import Image
-from pillow import ImageDraw 
-from pillow import ImageFont
+from PIL import Image
+from PIL import ImageDraw 
+from PIL import ImageFont
 
 
 # Copies one set of variables to another.
@@ -62,8 +63,8 @@ def set_image_bandit(values,probs,selection,trial):
     draw.text((130, 10),str(float("{0:.2f}".format(probs[1]))),(0,0,0),font=font)
     draw.text((60, 370),'Trial: ' + str(trial),(0,0,0),font=font)
     bandit_image = np.array(bandit_image)
-    bandit_image[115:115+np.floor(values[0]*2.5),20:75,:] = [0,255.0,0] 
-    bandit_image[115:115+np.floor(values[1]*2.5),120:175,:] = [0,255.0,0]    
+    bandit_image[115:115+math.floor(values[0]*2.5),20:75,:] = [0,255.0,0] 
+    bandit_image[115:115+math.floor(values[1]*2.5),120:175,:] = [0,255.0,0]    
     bandit_image[101:107,10+(selection*95):10+(selection*95)+80,:] = [80.0,80.0,225.0]
     return bandit_image
     
