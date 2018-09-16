@@ -50,7 +50,7 @@ if not os.path.exists(summary_path):
 
 # Environment of dependent bandit
 
-class De;endent():
+class Dependent_Bandit():
     def __init__(self,difficulty):
         self.num_actions = 2
         self.difficulty = difficulty
