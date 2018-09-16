@@ -1,41 +1,56 @@
 # Description
-#  python code imported from awjuliani implementation of meta-RL
+# python code modified from awjuliani implementation of meta-RL
+
 
 # Parameters
+num_workers = 1     # number of worker agents that acts in parallel
+gamma = .8          # discount rate for advantage estimation and reward discounting
+a_size = 2          # choice of actions
 
-gamma = .8 # discount rate for advantage estimation and reward discounting
-a_size = 2 # Agent can move Left, Right, or Fire
-#load_model = True
-load_model = False
-#train = False
-train = True
-model_path = './model_meta'
+#load_model = True  # load trained model
+load_model = False  # train model from scratch
+load_model_path = "./saved_data/20180917_011631"
+
+train = True        # enable training using the slow RL
+#train = False      # disable training using the slow RL
 
 
 # Libraries
 
 import os
 import threading
-import multiprocessing
+#import multiprocessing
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
-import scipy.signal
-from PIL import Image
-from PIL import ImageDraw 
-from PIL import ImageFont
-# %matplotlib inline
-from helper import *
-
-from random import choice
-from time import sleep
-from time import time
+#import scipy.signal
+import datetime
+#from PIL import Image
+#from PIL import ImageDraw 
+#from PIL import ImageFont
+from functions.helper import *
 
 
-# Helper Functions
+# directory organization
 
-class dependent_bandit():
+saved_data_path="./saved_data/"+"{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
+model_path=saved_data_path+"/model"
+pics_path=saved_data_path+"/pics"
+summary_path=saved_data_path+"/summary"
+if not os.path.exists(saved_data_path):
+    os.makedirs(saved_data_path)
+if not os.path.exists(model_path):
+    os.makedirs(model_path)
+if not os.path.exists(pics_path):
+    os.makedirs(pics_path)
+if not os.path.exists(summary_path):
+    os.makedirs(summary_path)
+
+
+# Environment of dependent bandit
+
+class De;endent():
     def __init__(self,difficulty):
         self.num_actions = 2
         self.difficulty = difficulty
@@ -159,7 +174,7 @@ class Worker():
         self.episode_rewards = []
         self.episode_lengths = []
         self.episode_mean_values = []
-        self.summary_writer = tf.summary.FileWriter("train_"+str(self.number))
+        self.summary_writer = tf.summary.FileWriter(summary_path+"/worker_"+str(self.number))
 
         #Create the local copy of the network and the tensorflow op to copy global paramters to local network
         self.local_AC = AC_Network(a_size,self.name,trainer)
@@ -225,7 +240,7 @@ class Worker():
                 self.env.reset()
                 rnn_state = self.local_AC.state_init
                 
-                while d == False:
+                while d == False: # d is "done" flag returned from the enviornment
                     #Take an action using probabilities from policy network output.
                     a_dist,v,rnn_state_new = sess.run([self.local_AC.policy,self.local_AC.value,self.local_AC.state_out], 
                         feed_dict={
@@ -263,12 +278,13 @@ class Worker():
 
                     if episode_count % 100 == 0 and self.name == 'worker_0':
                         self.images = np.array(episode_frames)
-                        make_gif(self.images,'./frames/image'+str(episode_count)+'.gif',
+                        make_gif(self.images,pics_path+'/image'+str(episode_count)+'.gif',
                             #duration=len(self.images)*0.1,true_image=True,salience=False)
                             duration=len(self.images)*0.1,true_image=True)
                     mean_reward = np.mean(self.episode_rewards[-50:])
                     mean_length = np.mean(self.episode_lengths[-50:])
                     mean_value = np.mean(self.episode_mean_values[-50:])
+                    # this syntax is used for saving only every 50 episodes instead of saving all
                     summary = tf.Summary()
                     summary.value.add(tag='Perf/Reward', simple_value=float(mean_reward))
                     summary.value.add(tag='Perf/Length', simple_value=float(mean_length))
@@ -291,24 +307,17 @@ class Worker():
 
 tf.reset_default_graph()
 
-if not os.path.exists(model_path):
-    os.makedirs(model_path)
-    
-if not os.path.exists('./frames'):
-    os.makedirs('./frames')
-
-
 with tf.device("/cpu:0"): 
 #with tf.device("/device:GPU:0"): 
     global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)
     trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
     master_network = AC_Network(a_size,'global',None) # Generate global network
     #num_workers = multiprocessing.cpu_count() # Set workers to number of available CPU threads
-    num_workers = 1
+    
     workers = []
     # Create worker classes
     for i in range(num_workers):
-        workers.append(Worker(dependent_bandit('uniform'),i,a_size,trainer,model_path,global_episodes))
+        workers.append(Worker(Dependent_Bandit('uniform'),i,a_size,trainer,model_path,global_episodes))
     saver = tf.train.Saver(max_to_keep=5)
 
 
@@ -316,7 +325,7 @@ with tf.Session() as sess:
     coord = tf.train.Coordinator()
     if load_model == True:
         print('Loading Model...')
-        ckpt = tf.train.get_checkpoint_state(model_path)
+        ckpt = tf.train.get_checkpoint_state(load_model_path)
         saver.restore(sess,ckpt.model_checkpoint_path)
     else:
         sess.run(tf.global_variables_initializer())
