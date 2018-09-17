@@ -1,11 +1,19 @@
-# Description
-# python code modified from awjuliani implementation of meta-RL
+"""
+Description
+python code modified from awjuliani implementation of meta-RL
+"""
 
+"""
+Parameters
+"""
+n_workers = 1       # number of worker agents that acts in parallel
+#gamma = .8
+gamma = .9          # discount rate for advantage estimation and reward discounting
+n_actions = 2       # choice of actions
+n_cells_lstm = 48   # number of cells in LSTM network
 
-# Parameters
-num_workers = 1     # number of worker agents that acts in parallel
-gamma = .8          # discount rate for advantage estimation and reward discounting
-a_size = 2          # choice of actions
+cost_statevalue_estimate = 0.05
+cost_entropy = 0.05
 
 #load_model = True  # load trained model
 load_model = False  # train model from scratch
@@ -15,8 +23,9 @@ train = True        # enable training using the slow RL
 #train = False      # disable training using the slow RL
 
 
-# Libraries
-
+"""
+Libraries
+"""
 import os
 import threading
 #import multiprocessing
@@ -32,8 +41,9 @@ import datetime
 from functions.helper import *
 
 
-# directory organization
-
+"""
+Directory Organization
+"""
 saved_data_path="./saved_data/"+"{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
 model_path=saved_data_path+"/model"
 pics_path=saved_data_path+"/pics"
@@ -48,8 +58,9 @@ if not os.path.exists(summary_path):
     os.makedirs(summary_path)
 
 
-# Environment of dependent bandit
-
+""""
+Environment of Dependent Bandit
+"""
 class Dependent_Bandit():
     def __init__(self,difficulty):
         self.num_actions = 2
@@ -93,21 +104,22 @@ class Dependent_Bandit():
         return reward,done,self.timestep
 
 
-# Actor-Critic Network
-
+"""
+Actor-Critic Network
+"""
 class AC_Network():
-    def __init__(self,a_size,scope,trainer):
+    def __init__(self,n_actions,scope,trainer):
         with tf.variable_scope(scope):
             #Input and visual encoding layers
             self.prev_rewards = tf.placeholder(shape=[None,1],dtype=tf.float32)
             self.prev_actions = tf.placeholder(shape=[None],dtype=tf.int32)
             self.timestep = tf.placeholder(shape=[None,1],dtype=tf.float32)
-            self.prev_actions_onehot = tf.one_hot(self.prev_actions,a_size,dtype=tf.float32)
+            self.prev_actions_onehot = tf.one_hot(self.prev_actions,n_actions,dtype=tf.float32)
 
             hidden = tf.concat([self.prev_rewards,self.prev_actions_onehot,self.timestep],1)
             
             #Recurrent network for temporal dependencies
-            lstm_cell = tf.contrib.rnn.BasicLSTMCell(48,state_is_tuple=True)
+            lstm_cell = tf.contrib.rnn.BasicLSTMCell(n_cells_lstm,state_is_tuple=True)
             c_init = np.zeros((1, lstm_cell.state_size.c), np.float32)
             h_init = np.zeros((1, lstm_cell.state_size.h), np.float32)
             self.state_init = [c_init, h_init]
@@ -115,20 +127,20 @@ class AC_Network():
             h_in = tf.placeholder(tf.float32, [1, lstm_cell.state_size.h])
             self.state_in = (c_in, h_in)
             rnn_in = tf.expand_dims(hidden, [0])
-            step_size = tf.shape(self.prev_rewards)[:1]
+            step_size = tf.shape(self.prev_rewards)[:1]     # returns shape of the tensor
             state_in = tf.contrib.rnn.LSTMStateTuple(c_in, h_in)
             lstm_outputs, lstm_state = tf.nn.dynamic_rnn(
                 lstm_cell, rnn_in, initial_state=state_in, sequence_length=step_size,
                 time_major=False)
             lstm_c, lstm_h = lstm_state
             self.state_out = (lstm_c[:1, :], lstm_h[:1, :])
-            rnn_out = tf.reshape(lstm_outputs, [-1, 48])
+            rnn_out = tf.reshape(lstm_outputs, [-1, n_cells_lstm])
             
             self.actions = tf.placeholder(shape=[None],dtype=tf.int32)
-            self.actions_onehot = tf.one_hot(self.actions,a_size,dtype=tf.float32)
+            self.actions_onehot = tf.one_hot(self.actions,n_actions,dtype=tf.float32)
                         
             #Output layers for policy and value estimations
-            self.policy = slim.fully_connected(rnn_out,a_size,
+            self.policy = slim.fully_connected(rnn_out,n_actions,
                 activation_fn=tf.nn.softmax,
                 weights_initializer=normalized_columns_initializer(0.01),
                 biases_initializer=None)
@@ -145,26 +157,31 @@ class AC_Network():
                 self.responsible_outputs = tf.reduce_sum(self.policy * self.actions_onehot, [1])
 
                 #Loss functions
-                self.value_loss = 0.5 * tf.reduce_sum(tf.square(self.target_v - tf.reshape(self.value,[-1])))
-                self.entropy = - tf.reduce_sum(self.policy * tf.log(self.policy + 1e-7))
-                self.policy_loss = -tf.reduce_sum(tf.log(self.responsible_outputs + 1e-7)*self.advantages)
-                self.loss = 0.5 *self.value_loss + self.policy_loss - self.entropy * 0.05
+                #self.value_loss = 0.5 * tf.reduce_sum(tf.square(self.target_v - tf.reshape(self.value,[-1])))
+                #self.entropy = - tf.reduce_sum(self.policy * tf.log(self.policy + 1e-7))
+                #self.policy_loss = -tf.reduce_sum(tf.log(self.responsible_outputs + 1e-7)*self.advantages)
+                #self.loss = 0.5 *self.value_loss + self.policy_loss - self.entropy * 0.05
+                self.policy_loss = - tf.reduce_sum(tf.log(self.responsible_outputs + 1e-10)*self.advantages) # advantage as a constant 
+                self.value_loss = tf.reduce_sum(tf.square(self.target_v - tf.reshape(self.value,[-1]))) # advantage as a variable
+                self.entropy = - tf.reduce_sum(self.policy * tf.log(self.policy + 1e-10))
+                self.loss = self.policy_loss + cost_statevalue_estimate * self.value_loss - cost_entropy * self.entropy
 
                 #Get gradients from local network using local losses
                 local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
                 self.gradients = tf.gradients(self.loss,local_vars)
-                self.var_norms = tf.global_norm(local_vars)
-                grads,self.grad_norms = tf.clip_by_global_norm(self.gradients,50.0)
+                self.var_norms = tf.global_norm(local_vars) # returns square root of the sum of squares of l2 norms of the input tensors
+                grads,self.grad_norms = tf.clip_by_global_norm(self.gradients,50.0) # returns a list of tensors clipped using global norms
                 
                 #Apply local gradients to global network
                 global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'global')
                 self.apply_grads = trainer.apply_gradients(zip(grads,global_vars))
 
 
-# Worker Agent
-
+"""
+Worker Agent
+"""
 class Worker():
-    def __init__(self,game,name,a_size,trainer,model_path,global_episodes):
+    def __init__(self,game,name,n_actions,trainer,model_path,global_episodes):
         self.name = "worker_" + str(name)
         self.number = name        
         self.model_path = model_path
@@ -177,7 +194,7 @@ class Worker():
         self.summary_writer = tf.summary.FileWriter(summary_path+"/worker_"+str(self.number))
 
         #Create the local copy of the network and the tensorflow op to copy global paramters to local network
-        self.local_AC = AC_Network(a_size,self.name,trainer)
+        self.local_AC = AC_Network(n_actions,self.name,trainer)
         self.update_local_ops = update_target_graph('global',self.name)        
         self.env = game
         
@@ -303,24 +320,26 @@ class Worker():
                 episode_count += 1
 
 
-# Main code
-
+"""
+Main code
+"""
 tf.reset_default_graph()
 
+# Setup worker agents for multiple threading
 with tf.device("/cpu:0"): 
 #with tf.device("/device:GPU:0"): 
     global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)
     trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
-    master_network = AC_Network(a_size,'global',None) # Generate global network
-    #num_workers = multiprocessing.cpu_count() # Set workers to number of available CPU threads
+    master_network = AC_Network(n_actions,'global',None) # Generate global network
+    #n_workers = multiprocessing.cpu_count() # Set workers to number of available CPU threads
     
     workers = []
     # Create worker classes
-    for i in range(num_workers):
-        workers.append(Worker(Dependent_Bandit('uniform'),i,a_size,trainer,model_path,global_episodes))
+    for i in range(n_workers):
+        workers.append(Worker(Dependent_Bandit('uniform'),i,n_actions,trainer,model_path,global_episodes))
     saver = tf.train.Saver(max_to_keep=5)
 
-
+# Run workers
 with tf.Session() as sess:
     coord = tf.train.Coordinator()
     if load_model == True:
