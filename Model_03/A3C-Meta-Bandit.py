@@ -4,7 +4,7 @@
 
 # Parameters
 
-n_workers = 1       # number of worker agents that acts in parallel
+n_agents = 1       # number of agents that acts in parallel
 n_actions = 2       # choice of actions
 n_cells_lstm = 48   # number of cells in LSTM network
 
@@ -142,7 +142,7 @@ class AC_Network():
                 weights_initializer=normalized_columns_initializer(1.0),
                 biases_initializer=None)
             
-            #Only the worker network need ops for loss functions and gradient updating.
+            #Only the agent network need ops for loss functions and gradient updating.
             if scope != 'global':
                 self.target_v = tf.placeholder(shape=[None],dtype=tf.float32)
                 self.advantages = tf.placeholder(shape=[None],dtype=tf.float32)
@@ -170,11 +170,11 @@ class AC_Network():
                 self.apply_grads = trainer.apply_gradients(zip(grads,global_vars))
 
 
-# Worker Agent
+# Agent
 
-class Worker():
+class Agent():
     def __init__(self,game,name,n_actions,trainer,model_path,global_episodes):
-        self.name = "worker_" + str(name)
+        self.name = "agent_" + str(name)
         self.number = name        
         self.model_path = model_path
         self.trainer = trainer
@@ -183,7 +183,7 @@ class Worker():
         self.episode_rewards = []
         self.episode_lengths = []
         self.episode_mean_values = []
-        self.summary_writer = tf.summary.FileWriter(summary_path+"/worker_"+str(self.number))   # store summaries for each worker
+        self.summary_writer = tf.summary.FileWriter(summary_path+"/agent_"+str(self.number))   # store summaries for each agent
 
         #Create the local copy of the network and the tensorflow op to copy global paramters to local network
         self.local_AC = AC_Network(n_actions,self.name,trainer)
@@ -231,12 +231,14 @@ class Worker():
         return v_l / len(rollout),p_l / len(rollout),e_l / len(rollout), g_n,v_n
         
     def work(self,gamma,sess,coord,saver,train):
-        episode_count_global = sess.run(self.global_episodes) # refer to global episode count over all worker agents
+        episode_count_global = sess.run(self.global_episodes) # refer to global episode count over all agents
         episode_count_local = 0
-        worker_steps = 0
-        print("Starting worker " + str(self.number))
+        agent_steps = 0
+        print("Starting agent_" + str(self.number))
         with sess.as_default(), sess.graph.as_default():                 
             while not coord.should_stop():
+                episode_count_global = sess.run(self.global_episodes) # refer to global episode count over all agents
+                print("Running global episode " + str(episode_count_global) + ", local episode " + str(episode_count_local))
                 sess.run(self.update_local_ops) # copy global graph to local
                 episode_buffer = []
                 episode_values = []
@@ -268,7 +270,7 @@ class Worker():
                     episode_values.append(v[0,0])
                     episode_frames.append(set_image_bandit(episode_reward,self.env.bandit,a,t))
                     episode_reward[a] += r
-                    worker_steps += 1
+                    agent_steps += 1
                     episode_steps += 1
                                             
                 self.episode_rewards.append(np.sum(episode_reward))
@@ -300,44 +302,44 @@ class Worker():
                     self.summary_writer.add_summary(summary, episode_count_local)
                     self.summary_writer.flush()
 
-                    # save global model + one local learning, baed on local episode_count, only in worker_0
-                    if episode_count_local % 500 == 0 and self.name == 'worker_0' and train == True:
+                    # save global model + one local learning, baed on local episode_count, only in agent_0
+                    if episode_count_local % 500 == 0 and self.name == 'agent_0' and train == True:
                         saver.save(sess,self.model_path+'/model-'+str(episode_count_local)+'.ckpt')
                         print("Saved Model")
 
-                    # save gif image of fast learning only in worker_0
-                    if episode_count_local % 100 == 0 and self.name == 'worker_0':
+                    # save gif image of fast learning only in agent_0
+                    if episode_count_local % 100 == 0 and self.name == 'agent_0':
                         self.images = np.array(episode_frames)
                         make_gif(self.images,pics_path+'/image'+str(episode_count_local)+'.gif',
                             #duration=len(self.images)*0.1,true_image=True,salience=False)
                             duration=len(self.images)*0.1,true_image=True)
 
-                #if self.name == 'worker_0':    # add to global global_episodes only if worker_0
+                #if self.name == 'agent_0':    # add to global global_episodes only if agent_0
                 #    sess.run(self.increment)
-                sess.run(self.increment)        # add to global global_episodes in all workers
-                episode_count_local += 1        # add to local episode_count in all workers
+                sess.run(self.increment)        # add to global global_episodes in all agents
+                episode_count_local += 1        # add to local episode_count in all agents
 
 
 # Main code
 
 tf.reset_default_graph()
 
-# Setup worker agents for multiple threading
+# Setup agents for multiple threading
 with tf.device("/cpu:0"): 
 #with tf.device("/device:GPU:0"): 
-    global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of episodes in worker_0 defined outside Worker class
+    global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of episodes in agent_0 defined outside Agent class
     #trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
     trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
     master_network = AC_Network(n_actions,'global',None) # Generate global network
-    #n_workers = multiprocessing.cpu_count() # Set workers to number of available CPU threads
+    #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
     
-    workers = []
-    # Create worker classes
-    for i in range(n_workers):
-        workers.append(Worker(Dependent_Bandit('uniform'),i,n_actions,trainer,model_path,global_episodes))
+    agents = []
+    # Create Agent classes
+    for i in range(n_agents):
+        agents.append(Agent(Dependent_Bandit('uniform'),i,n_actions,trainer,model_path,global_episodes))
     saver = tf.train.Saver(max_to_keep=5)
 
-# Run workers
+# Run agents
 with tf.Session() as sess:
     coord = tf.train.Coordinator()
     if load_model == True:
@@ -347,12 +349,12 @@ with tf.Session() as sess:
     else:
         sess.run(tf.global_variables_initializer())
         
-    worker_threads = []
-    for worker in workers:
-        worker_work = lambda: worker.work(gamma,sess,coord,saver,train)
-        thread = threading.Thread(target=(worker_work))
+    agent_threads = []
+    for agent in agents:
+        agent_work = lambda: agent.work(gamma,sess,coord,saver,train)
+        thread = threading.Thread(target=(agent_work))
         thread.start()
-        worker_threads.append(thread)
-    coord.join(worker_threads)
+        agent_threads.append(thread)
+    coord.join(agent_threads)
 
 # End of code
