@@ -5,11 +5,14 @@
 # Parameters
 
 n_workers = 1       # number of worker agents that acts in parallel
-#gamma = .8
-gamma = .9          # discount rate for advantage estimation and reward discounting
+
 n_actions = 2       # choice of actions
 n_cells_lstm = 48   # number of cells in LSTM network
 
+#gamma = .8
+gamma = .9          # discount rate for advantage estimation and reward discounting
+#learning_rate = 1e-3   # awjuliani/meta-RL (Adam optimzer)
+learning_rate = 0.0007  # Wang Nat Neurosci 2018 (RMSProp optimizer)
 cost_statevalue_estimate = 0.05
 cost_entropy = 0.05
 
@@ -32,9 +35,6 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import scipy.signal
 import datetime
-#from PIL import Image
-#from PIL import ImageDraw 
-#from PIL import ImageFont
 from functions.helper import *
 
 
@@ -321,7 +321,8 @@ tf.reset_default_graph()
 with tf.device("/cpu:0"): 
 #with tf.device("/device:GPU:0"): 
     global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)
-    trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
+    #trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
+    trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
     master_network = AC_Network(n_actions,'global',None) # Generate global network
     #n_workers = multiprocessing.cpu_count() # Set workers to number of available CPU threads
     
