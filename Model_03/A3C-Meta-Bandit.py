@@ -4,7 +4,8 @@
 
 # Parameters
 
-n_agents = 1       # number of agents that acts in parallel
+#n_agents = 1       # number of agents that acts in parallel
+n_agents = 2
 n_actions = 2       # choice of actions
 n_cells_lstm = 48   # number of cells in LSTM network
 
@@ -173,9 +174,9 @@ class AC_Network():
 # Agent
 
 class Agent():
-    def __init__(self,game,name,n_actions,trainer,model_path,global_episodes):
-        self.name = "agent_" + str(name)
-        self.number = name        
+    def __init__(self,game,id,n_actions,trainer,model_path,global_episodes):
+        self.name = "agent_" + str(id)
+        self.id = id        
         self.model_path = model_path
         self.trainer = trainer
         self.global_episodes = global_episodes
@@ -183,7 +184,7 @@ class Agent():
         self.episode_rewards = []
         self.episode_lengths = []
         self.episode_mean_values = []
-        self.summary_writer = tf.summary.FileWriter(summary_path+"/agent_"+str(self.number))   # store summaries for each agent
+        self.summary_writer = tf.summary.FileWriter(summary_path+"/agent_"+str(self.id))   # store summaries for each agent
 
         #Create the local copy of the network and the tensorflow op to copy global paramters to local network
         self.local_AC = AC_Network(n_actions,self.name,trainer)
@@ -234,11 +235,13 @@ class Agent():
         episode_count_global = sess.run(self.global_episodes) # refer to global episode count over all agents
         episode_count_local = 0
         agent_steps = 0
-        print("Starting agent_" + str(self.number))
+        print("Starting " + self.name + "                    ")
         with sess.as_default(), sess.graph.as_default():                 
             while not coord.should_stop():
-                episode_count_global = sess.run(self.global_episodes) # refer to global episode count over all agents
-                print("Running global episode " + str(episode_count_global) + ", local episode " + str(episode_count_local))
+                episode_count_global = sess.run(self.global_episodes)   # refer to global episode count over all agents
+                sess.run(self.increment)                                # add to global global_episodes
+                if self.name == 'agent_0':
+                    print("Running global episode " + str(episode_count_global) + ", " + self.name + " local episode " + str(episode_count_local)+ "          ", end="\r")
                 sess.run(self.update_local_ops) # copy global graph to local
                 episode_buffer = []
                 episode_values = []
@@ -316,7 +319,6 @@ class Agent():
 
                 #if self.name == 'agent_0':    # add to global global_episodes only if agent_0
                 #    sess.run(self.increment)
-                sess.run(self.increment)        # add to global global_episodes in all agents
                 episode_count_local += 1        # add to local episode_count in all agents
 
 
