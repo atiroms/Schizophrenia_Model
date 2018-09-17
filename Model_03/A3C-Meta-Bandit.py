@@ -1,11 +1,10 @@
 # Description
-# python code modified from awjuliani implementation of meta-RL
+# python code modified from awjuliani/meta-RL implementation of meta reinforcement learning
 
 
 # Parameters
 
 n_workers = 1       # number of worker agents that acts in parallel
-
 n_actions = 2       # choice of actions
 n_cells_lstm = 48   # number of cells in LSTM network
 
@@ -184,7 +183,7 @@ class Worker():
         self.episode_rewards = []
         self.episode_lengths = []
         self.episode_mean_values = []
-        self.summary_writer = tf.summary.FileWriter(summary_path+"/worker_"+str(self.number))
+        self.summary_writer = tf.summary.FileWriter(summary_path+"/worker_"+str(self.number))   # store summaries for each worker
 
         #Create the local copy of the network and the tensorflow op to copy global paramters to local network
         self.local_AC = AC_Network(n_actions,self.name,trainer)
@@ -232,17 +231,18 @@ class Worker():
         return v_l / len(rollout),p_l / len(rollout),e_l / len(rollout), g_n,v_n
         
     def work(self,gamma,sess,coord,saver,train):
-        episode_count = sess.run(self.global_episodes)
-        total_steps = 0
+        episode_count_global = sess.run(self.global_episodes) # refer to global episode count over all worker agents
+        episode_count_local = 0
+        worker_steps = 0
         print("Starting worker " + str(self.number))
         with sess.as_default(), sess.graph.as_default():                 
             while not coord.should_stop():
-                sess.run(self.update_local_ops)
+                sess.run(self.update_local_ops) # copy global graph to local
                 episode_buffer = []
                 episode_values = []
                 episode_frames = []
                 episode_reward = [0,0]
-                episode_step_count = 0
+                episode_steps = 0   # counter of steps within an episode
                 d = False
                 r = 0
                 a = 0
@@ -250,7 +250,7 @@ class Worker():
                 self.env.reset()
                 rnn_state = self.local_AC.state_init
                 
-                while d == False: # d is "done" flag returned from the enviornment
+                while d == False: # d is "done" flag returned from the environment
                     #Take an action using probabilities from policy network output.
                     a_dist,v,rnn_state_new = sess.run([self.local_AC.policy,self.local_AC.value,self.local_AC.state_out], 
                         feed_dict={
@@ -268,11 +268,11 @@ class Worker():
                     episode_values.append(v[0,0])
                     episode_frames.append(set_image_bandit(episode_reward,self.env.bandit,a,t))
                     episode_reward[a] += r
-                    total_steps += 1
-                    episode_step_count += 1
+                    worker_steps += 1
+                    episode_steps += 1
                                             
                 self.episode_rewards.append(np.sum(episode_reward))
-                self.episode_lengths.append(episode_step_count)
+                self.episode_lengths.append(episode_steps)
                 self.episode_mean_values.append(np.mean(episode_values))
                 
                 # Update the network using the experience buffer at the end of the episode.
@@ -281,16 +281,8 @@ class Worker():
             
                     
                 # Periodically save gifs of episodes, model parameters, and summary statistics.
-                if episode_count % 50 == 0 and episode_count != 0:
-                    if episode_count % 500 == 0 and self.name == 'worker_0' and train == True:
-                        saver.save(sess,self.model_path+'/model-'+str(episode_count)+'.ckpt')
-                        print("Saved Model")
-
-                    if episode_count % 100 == 0 and self.name == 'worker_0':
-                        self.images = np.array(episode_frames)
-                        make_gif(self.images,pics_path+'/image'+str(episode_count)+'.gif',
-                            #duration=len(self.images)*0.1,true_image=True,salience=False)
-                            duration=len(self.images)*0.1,true_image=True)
+                if episode_count_local % 50 == 0 and episode_count_local != 0:
+                    # save means of coefficients over the last 50 episodes
                     mean_reward = np.mean(self.episode_rewards[-50:])
                     mean_length = np.mean(self.episode_lengths[-50:])
                     mean_value = np.mean(self.episode_mean_values[-50:])
@@ -305,12 +297,25 @@ class Worker():
                         summary.value.add(tag='Losses/Entropy', simple_value=float(e_l))
                         summary.value.add(tag='Losses/Grad Norm', simple_value=float(g_n))
                         summary.value.add(tag='Losses/Var Norm', simple_value=float(v_n))
-                    self.summary_writer.add_summary(summary, episode_count)
-
+                    self.summary_writer.add_summary(summary, episode_count_local)
                     self.summary_writer.flush()
-                if self.name == 'worker_0':
-                    sess.run(self.increment)
-                episode_count += 1
+
+                    # save global model + one local learning, baed on local episode_count, only in worker_0
+                    if episode_count_local % 500 == 0 and self.name == 'worker_0' and train == True:
+                        saver.save(sess,self.model_path+'/model-'+str(episode_count_local)+'.ckpt')
+                        print("Saved Model")
+
+                    # save gif image of fast learning only in worker_0
+                    if episode_count_local % 100 == 0 and self.name == 'worker_0':
+                        self.images = np.array(episode_frames)
+                        make_gif(self.images,pics_path+'/image'+str(episode_count_local)+'.gif',
+                            #duration=len(self.images)*0.1,true_image=True,salience=False)
+                            duration=len(self.images)*0.1,true_image=True)
+
+                #if self.name == 'worker_0':    # add to global global_episodes only if worker_0
+                #    sess.run(self.increment)
+                sess.run(self.increment)        # add to global global_episodes in all workers
+                episode_count_local += 1        # add to local episode_count in all workers
 
 
 # Main code
@@ -320,7 +325,7 @@ tf.reset_default_graph()
 # Setup worker agents for multiple threading
 with tf.device("/cpu:0"): 
 #with tf.device("/device:GPU:0"): 
-    global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)
+    global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of episodes in worker_0 defined outside Worker class
     #trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
     trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
     master_network = AC_Network(n_actions,'global',None) # Generate global network
