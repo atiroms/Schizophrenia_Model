@@ -144,7 +144,7 @@ class AC_Network():
                 biases_initializer=None)
             
             #Only the agent network need ops for loss functions and gradient updating.
-            if scope != 'global':
+            if scope != 'master':
                 self.target_v = tf.placeholder(shape=[None],dtype=tf.float32)
                 self.advantages = tf.placeholder(shape=[None],dtype=tf.float32)
                 
@@ -166,9 +166,9 @@ class AC_Network():
                 self.var_norms = tf.global_norm(local_vars) # returns square root of the sum of squares of l2 norms of the input tensors
                 grads,self.grad_norms = tf.clip_by_global_norm(self.gradients,50.0) # returns a list of tensors clipped using global norms
                 
-                #Apply local gradients to global network
-                global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'global')
-                self.apply_grads = trainer.apply_gradients(zip(grads,global_vars))
+                #Apply local gradients to master network
+                master_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'master')
+                self.apply_grads = trainer.apply_gradients(zip(grads,master_vars))
 
 
 # Agent
@@ -181,14 +181,14 @@ class Agent():
         self.trainer = trainer
         self.global_episodes = global_episodes
         self.increment = self.global_episodes.assign_add(1)
-        self.episode_rewards = []
-        self.episode_lengths = []
-        self.episode_mean_values = []
+        #self.episode_rewards = []
+        #self.episode_lengths = []
+        #self.episode_mean_values = []
         self.summary_writer = tf.summary.FileWriter(summary_path+"/agent_"+str(self.id))   # store summaries for each agent
 
-        #Create the local copy of the network and the tensorflow op to copy global paramters to local network
+        #Create the local copy of the network and the tensorflow op to copy master paramters to local network
         self.local_AC = AC_Network(n_actions,self.name,trainer)
-        self.update_local_ops = update_target_graph('global',self.name)        
+        self.update_local_ops = update_target_graph('master',self.name)        
         self.env = game
         
     def train(self,rollout,sess,gamma,bootstrap_value):
@@ -211,10 +211,11 @@ class Agent():
         advantages = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantages = discount(advantages,gamma)
 
-        # Update the global network using gradients from loss
+        # Update the master network using gradients from loss
         # Generate network statistics to periodically save
         rnn_state = self.local_AC.state_init
-        feed_dict = {self.local_AC.target_v:discounted_rewards,
+        feed_dict = {
+            self.local_AC.target_v:discounted_rewards,
             self.local_AC.prev_rewards:np.vstack(prev_rewards),
             self.local_AC.prev_actions:prev_actions,
             self.local_AC.actions:actions,
@@ -222,14 +223,16 @@ class Agent():
             self.local_AC.advantages:advantages,
             self.local_AC.state_in[0]:rnn_state[0],
             self.local_AC.state_in[1]:rnn_state[1]}
-        v_l,p_l,e_l,g_n,v_n,_ = sess.run([self.local_AC.value_loss,
+        t_l,v_l,p_l,e_l,g_n,v_n,_ = sess.run([
+            self.local_AC.loss,
+            self.local_AC.value_loss,
             self.local_AC.policy_loss,
             self.local_AC.entropy,
             self.local_AC.grad_norms,
             self.local_AC.var_norms,
             self.local_AC.apply_grads],
             feed_dict=feed_dict)
-        return v_l / len(rollout),p_l / len(rollout),e_l / len(rollout), g_n,v_n
+        return t_l / len(rollout), v_l / len(rollout), p_l / len(rollout), e_l / len(rollout), g_n, v_n
         
     def work(self,gamma,sess,coord,saver,train):
         episode_count_global = sess.run(self.global_episodes) # refer to global episode count over all agents
@@ -242,7 +245,7 @@ class Agent():
                 sess.run(self.increment)                                # add to global global_episodes
                 if self.name == 'agent_0':
                     print("Running global episode " + str(episode_count_global) + ", " + self.name + " local episode " + str(episode_count_local)+ "          ", end="\r")
-                sess.run(self.update_local_ops) # copy global graph to local
+                sess.run(self.update_local_ops) # copy master graph to local
                 episode_buffer = []
                 episode_values = []
                 episode_frames = []
@@ -275,40 +278,54 @@ class Agent():
                     episode_reward[a] += r
                     agent_steps += 1
                     episode_steps += 1
-                                            
-                self.episode_rewards.append(np.sum(episode_reward))
-                self.episode_lengths.append(episode_steps)
-                self.episode_mean_values.append(np.mean(episode_values))
+                
+                #self.episode_rewards.append(np.sum(episode_reward))
+                #self.episode_lengths.append(episode_steps)
+                #self.episode_mean_values.append(np.mean(episode_values))
                 
                 # Update the network using the experience buffer at the end of the episode.
                 if len(episode_buffer) != 0 and train == True:
-                    v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,0.0)
-            
+                    t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,0.0)
+
+                # Save performance coefficients of the episode
+                summary = tf.Summary()
+                summary.value.add(tag="Performance/Reward", simple_value=float(np.sum(episode_reward)))
+                summary.value.add(tag="Performance/Step Length", simple_value=int(episode_steps))
+                summary.value.add(tag="Performance/Mean State-Action Value", simple_value=float(np.mean(episode_values)))
+                if train=True:
+                    summary.value.add(tag="Loss/Total Loss", simple_value=float(t_l))
+                    summary.value.add(tag="Loss/Value Loss", simple_value=float(v_l))
+                    summary.value.add(tag="Loss/Policy Loss", simple_value=float(p_l))
+                    summary.value.add(tag="Loss/Entropy", simple_value=float(e_l))
+                    summary.value.add(tag="Loss/Gradient L2Norm", simple_value=float(g_n))
+                    summary.value.add(tag="Loss/Varriable L2Norm", simple_value=float(v_n))
+                self.summary_writer.add_summary(summary, episode_count_local)
+                self.summary_writer.flush()
                     
                 # Periodically save gifs of episodes, model parameters, and summary statistics.
                 if episode_count_local % 50 == 0 and episode_count_local != 0:
                     # save means of coefficients over the last 50 episodes
-                    mean_reward = np.mean(self.episode_rewards[-50:])
-                    mean_length = np.mean(self.episode_lengths[-50:])
-                    mean_value = np.mean(self.episode_mean_values[-50:])
+                    #mean_reward = np.mean(self.episode_rewards[-50:])
+                    #mean_length = np.mean(self.episode_lengths[-50:])
+                    #mean_value = np.mean(self.episode_mean_values[-50:])
                     # this syntax is used for saving only every 50 episodes instead of saving all
-                    summary = tf.Summary()
-                    summary.value.add(tag='Perf/Reward', simple_value=float(mean_reward))
-                    summary.value.add(tag='Perf/Length', simple_value=float(mean_length))
-                    summary.value.add(tag='Perf/Value', simple_value=float(mean_value))
-                    if train == True:
-                        summary.value.add(tag='Losses/Value Loss', simple_value=float(v_l))
-                        summary.value.add(tag='Losses/Policy Loss', simple_value=float(p_l))
-                        summary.value.add(tag='Losses/Entropy', simple_value=float(e_l))
-                        summary.value.add(tag='Losses/Grad Norm', simple_value=float(g_n))
-                        summary.value.add(tag='Losses/Var Norm', simple_value=float(v_n))
-                    self.summary_writer.add_summary(summary, episode_count_local)
-                    self.summary_writer.flush()
+                    #summary = tf.Summary()
+                    #summary.value.add(tag='Perf/Reward', simple_value=float(mean_reward))
+                    #summary.value.add(tag='Perf/Length', simple_value=float(mean_length))
+                    #summary.value.add(tag='Perf/Value', simple_value=float(mean_value))
+                    #if train == True:
+                    #    summary.value.add(tag='Losses/Value Loss', simple_value=float(v_l))
+                    #    summary.value.add(tag='Losses/Policy Loss', simple_value=float(p_l))
+                    #    summary.value.add(tag='Losses/Entropy', simple_value=float(e_l))
+                    #    summary.value.add(tag='Losses/Grad Norm', simple_value=float(g_n))
+                    #    summary.value.add(tag='Losses/Var Norm', simple_value=float(v_n))
+                    #self.summary_writer.add_summary(summary, episode_count_local)
+                    #self.summary_writer.flush()
 
-                    # save global model + one local learning, baed on local episode_count, only in agent_0
+                    # save master model + one local learning, baed on local episode_count, only in agent_0
                     if episode_count_local % 500 == 0 and self.name == 'agent_0' and train == True:
                         saver.save(sess,self.model_path+'/model-'+str(episode_count_local)+'.ckpt')
-                        print("Saved Model")
+                        print("Saved model parameters                    ")
 
                     # save gif image of fast learning only in agent_0
                     if episode_count_local % 100 == 0 and self.name == 'agent_0':
@@ -332,7 +349,7 @@ with tf.device("/cpu:0"):
     global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of episodes in agent_0 defined outside Agent class
     #trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
     trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
-    master_network = AC_Network(n_actions,'global',None) # Generate global network
+    master_network = AC_Network(n_actions,'master',None) # Generate master network
     #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
     
     agents = []
