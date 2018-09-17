@@ -35,6 +35,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import scipy.signal
 import datetime
+import time
 from functions.helper import *
 
 
@@ -244,7 +245,8 @@ class Agent():
                 episode_count_global = sess.run(self.global_episodes)   # refer to global episode count over all agents
                 sess.run(self.increment)                                # add to global global_episodes
                 if self.name == 'agent_0':
-                    print("Running global episode " + str(episode_count_global) + ", " + self.name + " local episode " + str(episode_count_local)+ "          ", end="\r")
+                    print("Running global episode: " + str(episode_count_global) + ", " + self.name + " local episode: " + str(episode_count_local)+ "          ", end="\r")
+                t_start = time.time()
                 sess.run(self.update_local_ops) # copy master graph to local
                 episode_buffer = []
                 episode_values = []
@@ -279,10 +281,6 @@ class Agent():
                     agent_steps += 1
                     episode_steps += 1
                 
-                #self.episode_rewards.append(np.sum(episode_reward))
-                #self.episode_lengths.append(episode_steps)
-                #self.episode_mean_values.append(np.mean(episode_values))
-                
                 # Update the network using the experience buffer at the end of the episode.
                 if len(episode_buffer) != 0 and train == True:
                     t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,0.0)
@@ -292,50 +290,28 @@ class Agent():
                 summary.value.add(tag="Performance/Reward", simple_value=float(np.sum(episode_reward)))
                 summary.value.add(tag="Performance/Step Length", simple_value=int(episode_steps))
                 summary.value.add(tag="Performance/Mean State-Action Value", simple_value=float(np.mean(episode_values)))
-                if train=True:
+                summary.value.add(tag="Performance/Calculation Time", simple_value=float(time.time()-t_start))
+                if train == True:
                     summary.value.add(tag="Loss/Total Loss", simple_value=float(t_l))
                     summary.value.add(tag="Loss/Value Loss", simple_value=float(v_l))
                     summary.value.add(tag="Loss/Policy Loss", simple_value=float(p_l))
                     summary.value.add(tag="Loss/Entropy", simple_value=float(e_l))
                     summary.value.add(tag="Loss/Gradient L2Norm", simple_value=float(g_n))
-                    summary.value.add(tag="Loss/Varriable L2Norm", simple_value=float(v_n))
+                    summary.value.add(tag="Loss/Variable L2Norm", simple_value=float(v_n))
                 self.summary_writer.add_summary(summary, episode_count_local)
                 self.summary_writer.flush()
                     
-                # Periodically save gifs of episodes, model parameters, and summary statistics.
-                if episode_count_local % 50 == 0 and episode_count_local != 0:
-                    # save means of coefficients over the last 50 episodes
-                    #mean_reward = np.mean(self.episode_rewards[-50:])
-                    #mean_length = np.mean(self.episode_lengths[-50:])
-                    #mean_value = np.mean(self.episode_mean_values[-50:])
-                    # this syntax is used for saving only every 50 episodes instead of saving all
-                    #summary = tf.Summary()
-                    #summary.value.add(tag='Perf/Reward', simple_value=float(mean_reward))
-                    #summary.value.add(tag='Perf/Length', simple_value=float(mean_length))
-                    #summary.value.add(tag='Perf/Value', simple_value=float(mean_value))
-                    #if train == True:
-                    #    summary.value.add(tag='Losses/Value Loss', simple_value=float(v_l))
-                    #    summary.value.add(tag='Losses/Policy Loss', simple_value=float(p_l))
-                    #    summary.value.add(tag='Losses/Entropy', simple_value=float(e_l))
-                    #    summary.value.add(tag='Losses/Grad Norm', simple_value=float(g_n))
-                    #    summary.value.add(tag='Losses/Var Norm', simple_value=float(v_n))
-                    #self.summary_writer.add_summary(summary, episode_count_local)
-                    #self.summary_writer.flush()
+                # save model parameters
+                if episode_count_local % 500 == 0 and episode_count_local != 0 and self.name == 'agent_0' and train == True:
+                    saver.save(sess,self.model_path+'/model-'+str(episode_count_local)+'.ckpt')
+                    print("Saved model parameters                                        ")
 
-                    # save master model + one local learning, baed on local episode_count, only in agent_0
-                    if episode_count_local % 500 == 0 and self.name == 'agent_0' and train == True:
-                        saver.save(sess,self.model_path+'/model-'+str(episode_count_local)+'.ckpt')
-                        print("Saved model parameters                    ")
+                # save gif image of fast learning
+                if episode_count_local % 100 == 0 and episode_count_local != 0 and self.name == 'agent_0':
+                    self.images = np.array(episode_frames)
+                    make_gif(self.images,pics_path+'/image'+str(episode_count_local)+'.gif',
+                        duration=len(self.images)*0.1,true_image=True)
 
-                    # save gif image of fast learning only in agent_0
-                    if episode_count_local % 100 == 0 and self.name == 'agent_0':
-                        self.images = np.array(episode_frames)
-                        make_gif(self.images,pics_path+'/image'+str(episode_count_local)+'.gif',
-                            #duration=len(self.images)*0.1,true_image=True,salience=False)
-                            duration=len(self.images)*0.1,true_image=True)
-
-                #if self.name == 'agent_0':    # add to global global_episodes only if agent_0
-                #    sess.run(self.increment)
                 episode_count_local += 1        # add to local episode_count in all agents
 
 
