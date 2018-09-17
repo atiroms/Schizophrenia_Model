@@ -1,11 +1,11 @@
-"""
+'''
 Description
 python code modified from awjuliani implementation of meta-RL
-"""
+'''
 
-"""
+'''
 Parameters
-"""
+'''
 n_workers = 1       # number of worker agents that acts in parallel
 #gamma = .8
 gamma = .9          # discount rate for advantage estimation and reward discounting
@@ -23,9 +23,9 @@ train = True        # enable training using the slow RL
 #train = False      # disable training using the slow RL
 
 
-"""
+'''
 Libraries
-"""
+'''
 import os
 import threading
 #import multiprocessing
@@ -41,9 +41,9 @@ import datetime
 from functions.helper import *
 
 
-"""
+'''
 Directory Organization
-"""
+'''
 saved_data_path="./saved_data/"+"{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
 model_path=saved_data_path+"/model"
 pics_path=saved_data_path+"/pics"
@@ -58,9 +58,9 @@ if not os.path.exists(summary_path):
     os.makedirs(summary_path)
 
 
-""""
+'''"
 Environment of Dependent Bandit
-"""
+'''
 class Dependent_Bandit():
     def __init__(self,difficulty):
         self.num_actions = 2
@@ -104,9 +104,9 @@ class Dependent_Bandit():
         return reward,done,self.timestep
 
 
-"""
+'''
 Actor-Critic Network
-"""
+'''
 class AC_Network():
     def __init__(self,n_actions,scope,trainer):
         with tf.variable_scope(scope):
@@ -177,9 +177,9 @@ class AC_Network():
                 self.apply_grads = trainer.apply_gradients(zip(grads,global_vars))
 
 
-"""
+'''
 Worker Agent
-"""
+'''
 class Worker():
     def __init__(self,game,name,n_actions,trainer,model_path,global_episodes):
         self.name = "worker_" + str(name)
@@ -320,9 +320,9 @@ class Worker():
                 episode_count += 1
 
 
-"""
+'''
 Main code
-"""
+'''
 tf.reset_default_graph()
 
 # Setup worker agents for multiple threading
