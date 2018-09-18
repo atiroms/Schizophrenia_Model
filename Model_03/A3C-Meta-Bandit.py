@@ -1,30 +1,42 @@
-# Description
+###############
+# DESCRIPTION #
+###############
+
 # python code modified from awjuliani/meta-RL implementation of meta reinforcement learning
 
 
-# Parameters
+##############
+# PARAMETERS #
+##############
 
-#n_agents = 1       # number of agents that acts in parallel
+#n_agents = 1                   # number of agents that acts in parallel
 n_agents = 2
-n_actions = 2       # choice of actions
-n_cells_lstm = 48   # number of cells in LSTM network
+n_actions = 2                   # choice of actions
+n_cells_lstm = 48               # number of cells in LSTM network
 
 #gamma = .8
-gamma = .9          # discount rate for advantage estimation and reward discounting
-#learning_rate = 1e-3   # awjuliani/meta-RL (Adam optimzer)
-learning_rate = 0.0007  # Wang Nat Neurosci 2018 (RMSProp optimizer)
-cost_statevalue_estimate = 0.05
-cost_entropy = 0.05
+gamma = .9                      # discount rate for advantage estimation and reward discounting
+#learning_rate = 1e-3           # awjuliani/meta-RL (Adam optimzer)
+learning_rate = 0.0007          # Wang Nat Neurosci 2018 (RMSProp optimizer)
+cost_statevalue_estimate = 0.05 #0.025 in awjuliani/meta-RL
+cost_entropy = 0.05             # 0.05 in awjuliani/meta-RL
 
-#load_model = True  # load trained model
-load_model = False  # train model from scratch
+#load_model = True              # load trained model
+load_model = False              # train model from scratch
 load_model_path = "./saved_data/20180917_011631"
 
-train = True        # enable training using the slow RL
-#train = False      # disable training using the slow RL
+train = True                    # enable training using the slow RL
+#train = False                  # disable training using the slow RL
+
+bandit_difficulty="uniform"     # select "independent" for independent bandit
+
+interval_ckpt = 1000
+interval_pic = 100
 
 
-# Libraries
+#############
+# LIBRARIES #
+#############
 
 import os
 import threading
@@ -35,10 +47,13 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import scipy.signal
 import datetime
+import time
 from functions.helper import *
 
 
-# Directory Organization
+##########################
+# DIRECTORY ORGANIZATION #
+##########################
 
 saved_data_path="./saved_data/"+"{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
 model_path=saved_data_path+"/model"
@@ -54,36 +69,40 @@ if not os.path.exists(summary_path):
     os.makedirs(summary_path)
 
 
-# Environment of Dependent Bandit
+###################################
+# ENVIRONMENT OF TWO-ARMED BANDIT #
+###################################
 
-class Dependent_Bandit():
+class Two_Armed_Bandit():
     def __init__(self,difficulty):
-        self.num_actions = 2
+        self.n_actions = 2
         self.difficulty = difficulty
-        self.reset()
+        #self.reset()
         
-    def set_restless_prob(self):
-        self.bandit = np.array([self.restless_list[self.timestep],1 - self.restless_list[self.timestep]])
+    def set_restless_prob(self):    # sample from random walk list
+        self.bandit = np.array([self.restless_list[self.timestep],1 - self.restless_list[self.timestep]])  
         
     def reset(self):
         self.timestep = 0
-        if self.difficulty == 'restless': 
-            variance = np.random.uniform(0,.5)
-            self.restless_list = np.cumsum(np.random.uniform(-variance,variance,(150,1)))
+        if self.difficulty == "restless":       # bandit probability random-walks within an episode
+            variance = np.random.uniform(0,.5)  # degree of random walk
+            self.restless_list = np.cumsum(np.random.uniform(-variance,variance,(150,1)))   # calculation of random walk
             self.restless_list = (self.restless_list - np.min(self.restless_list)) / (np.max(self.restless_list - np.min(self.restless_list))) 
             self.set_restless_prob()
-        if self.difficulty == 'easy': bandit_prob = np.random.choice([0.9,0.1])
-        if self.difficulty == 'medium': bandit_prob = np.random.choice([0.75,0.25])
-        if self.difficulty == 'hard': bandit_prob = np.random.choice([0.6,0.4])
-        if self.difficulty == 'uniform': bandit_prob = np.random.uniform()
-        if self.difficulty != 'independent' and self.difficulty != 'restless':
+        if self.difficulty == "easy": bandit_prob = np.random.choice([0.9,0.1])
+        if self.difficulty == "medium": bandit_prob = np.random.choice([0.75,0.25])
+        if self.difficulty == "hard": bandit_prob = np.random.choice([0.6,0.4])
+        if self.difficulty == "uniform": bandit_prob = np.random.uniform()
+        if self.difficulty == "independent": self.bandit = np.random.uniform(size=2)
+
+        if self.difficulty != "restless" and self.difficulty != "independent":
             self.bandit = np.array([bandit_prob,1 - bandit_prob])
-        else:
-            self.bandit = np.random.uniform(size=2)
+
+        return self.bandit
         
     def pullArm(self,action):
         #Get a random number.
-        if self.difficulty == 'restless': self.set_restless_prob()
+        if self.difficulty == "restless": self.set_restless_prob()  # sample from random walk list
         self.timestep += 1
         bandit = self.bandit[action]
         result = np.random.uniform()
@@ -99,9 +118,11 @@ class Dependent_Bandit():
         return reward,done,self.timestep
 
 
-# Actor-Critic Network
+################
+# LSTM NETWORK #
+################
 
-class AC_Network():
+class LSTM_Network():
     def __init__(self,n_actions,scope,trainer):
         with tf.variable_scope(scope):
             #Input and visual encoding layers
@@ -144,10 +165,9 @@ class AC_Network():
                 biases_initializer=None)
             
             #Only the agent network need ops for loss functions and gradient updating.
-            if scope != 'global':
+            if scope != 'master':
                 self.target_v = tf.placeholder(shape=[None],dtype=tf.float32)
                 self.advantages = tf.placeholder(shape=[None],dtype=tf.float32)
-                
                 self.responsible_outputs = tf.reduce_sum(self.policy * self.actions_onehot, [1])
 
                 #Loss functions
@@ -166,29 +186,31 @@ class AC_Network():
                 self.var_norms = tf.global_norm(local_vars) # returns square root of the sum of squares of l2 norms of the input tensors
                 grads,self.grad_norms = tf.clip_by_global_norm(self.gradients,50.0) # returns a list of tensors clipped using global norms
                 
-                #Apply local gradients to global network
-                global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'global')
-                self.apply_grads = trainer.apply_gradients(zip(grads,global_vars))
+                #Apply local gradients to master network
+                master_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'master')
+                self.apply_grads = trainer.apply_gradients(zip(grads,master_vars))
 
 
-# Agent
+#############
+# A2C AGENT #
+#############
 
-class Agent():
+class A2C_Agent():
     def __init__(self,game,id,n_actions,trainer,model_path,global_episodes):
+        self.id = id  
         self.name = "agent_" + str(id)
-        self.id = id        
         self.model_path = model_path
         self.trainer = trainer
         self.global_episodes = global_episodes
         self.increment = self.global_episodes.assign_add(1)
-        self.episode_rewards = []
-        self.episode_lengths = []
-        self.episode_mean_values = []
-        self.summary_writer = tf.summary.FileWriter(summary_path+"/agent_"+str(self.id))   # store summaries for each agent
+        #self.episode_rewards = []
+        #self.episode_lengths = []
+        #self.episode_mean_values = []
+        self.summary_writer = tf.summary.FileWriter(summary_path+"/"+self.name)   # store summaries for each agent
 
-        #Create the local copy of the network and the tensorflow op to copy global paramters to local network
-        self.local_AC = AC_Network(n_actions,self.name,trainer)
-        self.update_local_ops = update_target_graph('global',self.name)        
+        #Create the local copy of the network and the tensorflow op to copy master paramters to local network
+        self.local_AC = LSTM_Network(n_actions,self.name,trainer)
+        self.update_local_ops = update_target_graph('master',self.name)        
         self.env = game
         
     def train(self,rollout,sess,gamma,bootstrap_value):
@@ -211,10 +233,11 @@ class Agent():
         advantages = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantages = discount(advantages,gamma)
 
-        # Update the global network using gradients from loss
+        # Update the master network using gradients from loss
         # Generate network statistics to periodically save
         rnn_state = self.local_AC.state_init
-        feed_dict = {self.local_AC.target_v:discounted_rewards,
+        feed_dict = {
+            self.local_AC.target_v:discounted_rewards,
             self.local_AC.prev_rewards:np.vstack(prev_rewards),
             self.local_AC.prev_actions:prev_actions,
             self.local_AC.actions:actions,
@@ -222,14 +245,16 @@ class Agent():
             self.local_AC.advantages:advantages,
             self.local_AC.state_in[0]:rnn_state[0],
             self.local_AC.state_in[1]:rnn_state[1]}
-        v_l,p_l,e_l,g_n,v_n,_ = sess.run([self.local_AC.value_loss,
+        t_l,v_l,p_l,e_l,g_n,v_n,_ = sess.run([
+            self.local_AC.loss,
+            self.local_AC.value_loss,
             self.local_AC.policy_loss,
             self.local_AC.entropy,
             self.local_AC.grad_norms,
             self.local_AC.var_norms,
             self.local_AC.apply_grads],
             feed_dict=feed_dict)
-        return v_l / len(rollout),p_l / len(rollout),e_l / len(rollout), g_n,v_n
+        return t_l / len(rollout), v_l / len(rollout), p_l / len(rollout), e_l / len(rollout), g_n, v_n
         
     def work(self,gamma,sess,coord,saver,train):
         episode_count_global = sess.run(self.global_episodes) # refer to global episode count over all agents
@@ -237,12 +262,12 @@ class Agent():
         agent_steps = 0
         print("Starting " + self.name + "                    ")
         with sess.as_default(), sess.graph.as_default():                 
-            while not coord.should_stop():
+            while not coord.should_stop():      # iterate over episodes
                 episode_count_global = sess.run(self.global_episodes)   # refer to global episode count over all agents
                 sess.run(self.increment)                                # add to global global_episodes
-                if self.name == 'agent_0':
-                    print("Running global episode " + str(episode_count_global) + ", " + self.name + " local episode " + str(episode_count_local)+ "          ", end="\r")
-                sess.run(self.update_local_ops) # copy global graph to local
+                print("Running global episode: " + str(episode_count_global) + ", " + self.name + " local episode: " + str(episode_count_local)+ "          ", end="\r")
+                t_start = time.time()
+                sess.run(self.update_local_ops) # copy master graph to local
                 episode_buffer = []
                 episode_values = []
                 episode_frames = []
@@ -252,18 +277,20 @@ class Agent():
                 r = 0
                 a = 0
                 t = 0
-                self.env.reset()
+                bandit = self.env.reset()   # returns np.array of bandit probabilities
                 rnn_state = self.local_AC.state_init
                 
+                # act
                 while d == False: # d is "done" flag returned from the environment
                     #Take an action using probabilities from policy network output.
-                    a_dist,v,rnn_state_new = sess.run([self.local_AC.policy,self.local_AC.value,self.local_AC.state_out], 
+                    a_dist,v,rnn_state_new = sess.run(
+                        [self.local_AC.policy,self.local_AC.value,self.local_AC.state_out], 
                         feed_dict={
-                        self.local_AC.prev_rewards:[[r]],
-                        self.local_AC.timestep:[[t]],
-                        self.local_AC.prev_actions:[a],
-                        self.local_AC.state_in[0]:rnn_state[0],
-                        self.local_AC.state_in[1]:rnn_state[1]})
+                            self.local_AC.prev_rewards:[[r]],
+                            self.local_AC.timestep:[[t]],
+                            self.local_AC.prev_actions:[a],
+                            self.local_AC.state_in[0]:rnn_state[0],
+                            self.local_AC.state_in[1]:rnn_state[1]})
                     a = np.random.choice(a_dist[0],p=a_dist[0])
                     a = np.argmax(a_dist == a)
                     
@@ -275,70 +302,62 @@ class Agent():
                     episode_reward[a] += r
                     agent_steps += 1
                     episode_steps += 1
-                                            
-                self.episode_rewards.append(np.sum(episode_reward))
-                self.episode_lengths.append(episode_steps)
-                self.episode_mean_values.append(np.mean(episode_values))
                 
-                # Update the network using the experience buffer at the end of the episode.
+                # train the network using the experience buffer at the end of the episode.
                 if len(episode_buffer) != 0 and train == True:
-                    v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,0.0)
-            
+                    t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,0.0)
+
+                # Save information of the episode
+                summary_episode = tf.Summary()
+                summary_episode.value.add(tag="Performance/Reward", simple_value=float(np.sum(episode_reward)))
+                summary_episode.value.add(tag="Performance/Mean State-Action Value", simple_value=float(np.mean(episode_values)))
+                summary_episode.value.add(tag="Simulation/Calculation Time", simple_value=float(time.time()-t_start))
+                summary_episode.value.add(tag="Environment/Step Length", simple_value=int(episode_steps))
+                summary_episode.value.add(tag="Environment/Arm0 Probability", simple_value=float(bandit[0]))
+                summary_episode.value.add(tag="Environment/Arm1 Probability", simple_value=float(bandit[1]))
+                if train == True:
+                    summary_episode.value.add(tag="Loss/Total Loss", simple_value=float(t_l))
+                    summary_episode.value.add(tag="Loss/Value Loss", simple_value=float(v_l))
+                    summary_episode.value.add(tag="Loss/Policy Loss", simple_value=float(p_l))
+                    summary_episode.value.add(tag="Loss/Entropy", simple_value=float(e_l))
+                    summary_episode.value.add(tag="Loss/Gradient L2Norm", simple_value=float(g_n))
+                    summary_episode.value.add(tag="Loss/Variable L2Norm", simple_value=float(v_n))
+                self.summary_writer.add_summary(summary_episode, episode_count_global)
+                self.summary_writer.flush()
                     
-                # Periodically save gifs of episodes, model parameters, and summary statistics.
-                if episode_count_local % 50 == 0 and episode_count_local != 0:
-                    # save means of coefficients over the last 50 episodes
-                    mean_reward = np.mean(self.episode_rewards[-50:])
-                    mean_length = np.mean(self.episode_lengths[-50:])
-                    mean_value = np.mean(self.episode_mean_values[-50:])
-                    # this syntax is used for saving only every 50 episodes instead of saving all
-                    summary = tf.Summary()
-                    summary.value.add(tag='Perf/Reward', simple_value=float(mean_reward))
-                    summary.value.add(tag='Perf/Length', simple_value=float(mean_length))
-                    summary.value.add(tag='Perf/Value', simple_value=float(mean_value))
-                    if train == True:
-                        summary.value.add(tag='Losses/Value Loss', simple_value=float(v_l))
-                        summary.value.add(tag='Losses/Policy Loss', simple_value=float(p_l))
-                        summary.value.add(tag='Losses/Entropy', simple_value=float(e_l))
-                        summary.value.add(tag='Losses/Grad Norm', simple_value=float(g_n))
-                        summary.value.add(tag='Losses/Var Norm', simple_value=float(v_n))
-                    self.summary_writer.add_summary(summary, episode_count_local)
-                    self.summary_writer.flush()
+                # save model parameters
+                if episode_count_local % interval_ckpt == 0 and episode_count_local != 0 and self.name == 'agent_0' and train == True:
+                    saver.save(sess,self.model_path+'/model-'+str(episode_count_local)+'.ckpt')
+                    print("Saved model parameters                                        ")
 
-                    # save global model + one local learning, baed on local episode_count, only in agent_0
-                    if episode_count_local % 500 == 0 and self.name == 'agent_0' and train == True:
-                        saver.save(sess,self.model_path+'/model-'+str(episode_count_local)+'.ckpt')
-                        print("Saved Model")
+                # save gif image of fast learning
+                if episode_count_local % interval_pic == 0 and episode_count_local != 0 and self.name == 'agent_0':
+                    self.images = np.array(episode_frames)
+                    make_gif(self.images,pics_path+'/image'+str(episode_count_local)+'.gif',
+                        duration=len(self.images)*0.1,true_image=True)
 
-                    # save gif image of fast learning only in agent_0
-                    if episode_count_local % 100 == 0 and self.name == 'agent_0':
-                        self.images = np.array(episode_frames)
-                        make_gif(self.images,pics_path+'/image'+str(episode_count_local)+'.gif',
-                            #duration=len(self.images)*0.1,true_image=True,salience=False)
-                            duration=len(self.images)*0.1,true_image=True)
-
-                #if self.name == 'agent_0':    # add to global global_episodes only if agent_0
-                #    sess.run(self.increment)
                 episode_count_local += 1        # add to local episode_count in all agents
 
 
-# Main code
+#############
+# MAIN CODE #
+#############
 
 tf.reset_default_graph()
 
 # Setup agents for multiple threading
 with tf.device("/cpu:0"): 
 #with tf.device("/device:GPU:0"): 
-    global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of episodes in agent_0 defined outside Agent class
+    global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of episodes in agent_0 defined outside A2C_Agent class
     #trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
     trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
-    master_network = AC_Network(n_actions,'global',None) # Generate global network
+    master_network = LSTM_Network(n_actions,'master',None) # Generate master network
     #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
     
     agents = []
-    # Create Agent classes
+    # Create A2C_Agent classes
     for i in range(n_agents):
-        agents.append(Agent(Dependent_Bandit('uniform'),i,n_actions,trainer,model_path,global_episodes))
+        agents.append(A2C_Agent(Two_Armed_Bandit(bandit_difficulty),i,n_actions,trainer,model_path,global_episodes))
     saver = tf.train.Saver(max_to_keep=5)
 
 # Run agents
@@ -359,4 +378,4 @@ with tf.Session() as sess:
         agent_threads.append(thread)
     coord.join(agent_threads)
 
-# End of code
+# END OF FILE
