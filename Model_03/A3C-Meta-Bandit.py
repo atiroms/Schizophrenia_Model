@@ -9,10 +9,10 @@
 # PARAMETERS #
 ##############
 
-#n_agents = 1       # number of agents that acts in parallel
+#n_agents = 1                   # number of agents that acts in parallel
 n_agents = 2
-n_actions = 2       # choice of actions
-n_cells_lstm = 48   # number of cells in LSTM network
+n_actions = 2                   # choice of actions
+n_cells_lstm = 48               # number of cells in LSTM network
 
 #gamma = .8
 gamma = .9                      # discount rate for advantage estimation and reward discounting
@@ -21,12 +21,14 @@ learning_rate = 0.0007          # Wang Nat Neurosci 2018 (RMSProp optimizer)
 cost_statevalue_estimate = 0.05 #0.025 in awjuliani/meta-RL
 cost_entropy = 0.05             # 0.05 in awjuliani/meta-RL
 
-#load_model = True  # load trained model
-load_model = False  # train model from scratch
+#load_model = True              # load trained model
+load_model = False              # train model from scratch
 load_model_path = "./saved_data/20180917_011631"
 
-train = True        # enable training using the slow RL
-#train = False      # disable training using the slow RL
+train = True                    # enable training using the slow RL
+#train = False                  # disable training using the slow RL
+
+bandit_difficulty="uniform"     # select "independent" for independent bandit
 
 
 #############
@@ -65,37 +67,39 @@ if not os.path.exists(summary_path):
 
 
 ###################################
-# ENVIRONMENT OF DEPENDENT BANDIT #
+# ENVIRONMENT OF TWO-ARMED BANDIT #
 ###################################
 
-class Dependent_Bandit():
+class Two_Armed_Bandit():
     def __init__(self,difficulty):
-        self.num_actions = 2
+        self.n_actions = 2
         self.difficulty = difficulty
-        self.reset()
+        #self.reset()
         
-    def set_restless_prob(self):
-        self.bandit = np.array([self.restless_list[self.timestep],1 - self.restless_list[self.timestep]])
+    def set_restless_prob(self):    # sample from random walk list
+        self.bandit = np.array([self.restless_list[self.timestep],1 - self.restless_list[self.timestep]])  
         
     def reset(self):
         self.timestep = 0
-        if self.difficulty == 'restless': 
-            variance = np.random.uniform(0,.5)
-            self.restless_list = np.cumsum(np.random.uniform(-variance,variance,(150,1)))
+        if self.difficulty == "restless":       # bandit probability random-walks within an episode
+            variance = np.random.uniform(0,.5)  # degree of random walk
+            self.restless_list = np.cumsum(np.random.uniform(-variance,variance,(150,1)))   # calculation of random walk
             self.restless_list = (self.restless_list - np.min(self.restless_list)) / (np.max(self.restless_list - np.min(self.restless_list))) 
             self.set_restless_prob()
-        if self.difficulty == 'easy': bandit_prob = np.random.choice([0.9,0.1])
-        if self.difficulty == 'medium': bandit_prob = np.random.choice([0.75,0.25])
-        if self.difficulty == 'hard': bandit_prob = np.random.choice([0.6,0.4])
-        if self.difficulty == 'uniform': bandit_prob = np.random.uniform()
-        if self.difficulty != 'independent' and self.difficulty != 'restless':
+        if self.difficulty == "easy": bandit_prob = np.random.choice([0.9,0.1])
+        if self.difficulty == "medium": bandit_prob = np.random.choice([0.75,0.25])
+        if self.difficulty == "hard": bandit_prob = np.random.choice([0.6,0.4])
+        if self.difficulty == "uniform": bandit_prob = np.random.uniform()
+        if self.difficulty == "independent": self.bandit = np.random.uniform(size=2)
+
+        if self.difficulty != "restless" and self.difficulty != "independent":
             self.bandit = np.array([bandit_prob,1 - bandit_prob])
-        else:
-            self.bandit = np.random.uniform(size=2)
+
+        return self.bandit
         
     def pullArm(self,action):
         #Get a random number.
-        if self.difficulty == 'restless': self.set_restless_prob()
+        if self.difficulty == "restless": self.set_restless_prob()  # sample from random walk list
         self.timestep += 1
         bandit = self.bandit[action]
         result = np.random.uniform()
@@ -111,11 +115,11 @@ class Dependent_Bandit():
         return reward,done,self.timestep
 
 
-###################
-# LSTM-AC NETWORK #
-###################
+################
+# LSTM NETWORK #
+################
 
-class LSTM_AC_Network():
+class LSTM_Network():
     def __init__(self,n_actions,scope,trainer):
         with tf.variable_scope(scope):
             #Input and visual encoding layers
@@ -161,7 +165,6 @@ class LSTM_AC_Network():
             if scope != 'master':
                 self.target_v = tf.placeholder(shape=[None],dtype=tf.float32)
                 self.advantages = tf.placeholder(shape=[None],dtype=tf.float32)
-                
                 self.responsible_outputs = tf.reduce_sum(self.policy * self.actions_onehot, [1])
 
                 #Loss functions
@@ -189,7 +192,7 @@ class LSTM_AC_Network():
 # A2C AGENT #
 #############
 
-class Agent():
+class A2C_Agent():
     def __init__(self,game,id,n_actions,trainer,model_path,global_episodes):
         self.id = id  
         self.name = "agent_" + str(id)
@@ -203,7 +206,7 @@ class Agent():
         self.summary_writer = tf.summary.FileWriter(summary_path+"/"+self.name)   # store summaries for each agent
 
         #Create the local copy of the network and the tensorflow op to copy master paramters to local network
-        self.local_AC = LSTM_AC_Network(n_actions,self.name,trainer)
+        self.local_AC = LSTM_Network(n_actions,self.name,trainer)
         self.update_local_ops = update_target_graph('master',self.name)        
         self.env = game
         
@@ -256,7 +259,7 @@ class Agent():
         agent_steps = 0
         print("Starting " + self.name + "                    ")
         with sess.as_default(), sess.graph.as_default():                 
-            while not coord.should_stop():
+            while not coord.should_stop():      # iterate over episodes
                 episode_count_global = sess.run(self.global_episodes)   # refer to global episode count over all agents
                 sess.run(self.increment)                                # add to global global_episodes
                 print("Running global episode: " + str(episode_count_global) + ", " + self.name + " local episode: " + str(episode_count_local)+ "          ", end="\r")
@@ -271,18 +274,20 @@ class Agent():
                 r = 0
                 a = 0
                 t = 0
-                self.env.reset()
+                bandit = self.env.reset()   # returns np.array of bandit probabilities
                 rnn_state = self.local_AC.state_init
                 
+                # act
                 while d == False: # d is "done" flag returned from the environment
                     #Take an action using probabilities from policy network output.
-                    a_dist,v,rnn_state_new = sess.run([self.local_AC.policy,self.local_AC.value,self.local_AC.state_out], 
+                    a_dist,v,rnn_state_new = sess.run(
+                        [self.local_AC.policy,self.local_AC.value,self.local_AC.state_out], 
                         feed_dict={
-                        self.local_AC.prev_rewards:[[r]],
-                        self.local_AC.timestep:[[t]],
-                        self.local_AC.prev_actions:[a],
-                        self.local_AC.state_in[0]:rnn_state[0],
-                        self.local_AC.state_in[1]:rnn_state[1]})
+                            self.local_AC.prev_rewards:[[r]],
+                            self.local_AC.timestep:[[t]],
+                            self.local_AC.prev_actions:[a],
+                            self.local_AC.state_in[0]:rnn_state[0],
+                            self.local_AC.state_in[1]:rnn_state[1]})
                     a = np.random.choice(a_dist[0],p=a_dist[0])
                     a = np.argmax(a_dist == a)
                     
@@ -295,16 +300,18 @@ class Agent():
                     agent_steps += 1
                     episode_steps += 1
                 
-                # Update the network using the experience buffer at the end of the episode.
+                # train the network using the experience buffer at the end of the episode.
                 if len(episode_buffer) != 0 and train == True:
                     t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,0.0)
 
-                # Save performance coefficients of the episode
+                # Save information of the episode
                 summary = tf.Summary()
                 summary.value.add(tag="Performance/Reward", simple_value=float(np.sum(episode_reward)))
                 summary.value.add(tag="Performance/Mean State-Action Value", simple_value=float(np.mean(episode_values)))
-                summary.value.add(tag="Simulation/Step Length", simple_value=int(episode_steps))
                 summary.value.add(tag="Simulation/Calculation Time", simple_value=float(time.time()-t_start))
+                summary.value.add(tag="Environment/Step Length", simple_value=int(episode_steps))
+                summary.value.add(tag="Environment/Arm0 Probability", simple_value=float(bandit[0]))
+                summary.value.add(tag="Environment/Arm1 Probability", simple_value=float(bandit[1]))
                 if train == True:
                     summary.value.add(tag="Loss/Total Loss", simple_value=float(t_l))
                     summary.value.add(tag="Loss/Value Loss", simple_value=float(v_l))
@@ -338,16 +345,16 @@ tf.reset_default_graph()
 # Setup agents for multiple threading
 with tf.device("/cpu:0"): 
 #with tf.device("/device:GPU:0"): 
-    global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of episodes in agent_0 defined outside Agent class
+    global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of episodes in agent_0 defined outside A2C_Agent class
     #trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
     trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
-    master_network = LSTM_AC_Network(n_actions,'master',None) # Generate master network
+    master_network = LSTM_Network(n_actions,'master',None) # Generate master network
     #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
     
     agents = []
-    # Create Agent classes
+    # Create A2C_Agent classes
     for i in range(n_agents):
-        agents.append(Agent(Dependent_Bandit('uniform'),i,n_actions,trainer,model_path,global_episodes))
+        agents.append(A2C_Agent(Two_Armed_Bandit(bandit_difficulty),i,n_actions,trainer,model_path,global_episodes))
     saver = tf.train.Saver(max_to_keep=5)
 
 # Run agents
