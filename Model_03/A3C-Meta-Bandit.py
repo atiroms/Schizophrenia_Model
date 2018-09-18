@@ -9,16 +9,16 @@
 # PARAMETERS #
 ##############
 
-#n_agents = 1                   # number of agents that acts in parallel
-n_agents = 2
+n_agents = 1                   # number of agents that acts in parallel
+#n_agents = 2
 n_actions = 2                   # choice of actions
-n_cells_lstm = 48               # number of cells in LSTM network
+n_cells_lstm = 48               # number of cells in LSTM-RNN network
 
 #gamma = .8
 gamma = .9                      # discount rate for advantage estimation and reward discounting
 #learning_rate = 1e-3           # awjuliani/meta-RL (Adam optimzer)
 learning_rate = 0.0007          # Wang Nat Neurosci 2018 (RMSProp optimizer)
-cost_statevalue_estimate = 0.05 #0.025 in awjuliani/meta-RL
+cost_statevalue_estimate = 0.05 # 0.025 in awjuliani/meta-RL
 cost_entropy = 0.05             # 0.05 in awjuliani/meta-RL
 
 #load_model = True              # load trained model
@@ -48,6 +48,7 @@ import tensorflow.contrib.slim as slim
 import scipy.signal
 import datetime
 import time
+import pandas as pd
 from functions.helper import *
 
 
@@ -59,6 +60,7 @@ saved_data_path="./saved_data/"+"{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now
 model_path=saved_data_path+"/model"
 pics_path=saved_data_path+"/pics"
 summary_path=saved_data_path+"/summary"
+activity_path=saved_data_path+"/activity"
 if not os.path.exists(saved_data_path):
     os.makedirs(saved_data_path)
 if not os.path.exists(model_path):
@@ -67,7 +69,8 @@ if not os.path.exists(pics_path):
     os.makedirs(pics_path)
 if not os.path.exists(summary_path):
     os.makedirs(summary_path)
-
+if not os.path.exists(activity_path):
+    os.makedirs(activity_path)
 
 ###################################
 # ENVIRONMENT OF TWO-ARMED BANDIT #
@@ -118,11 +121,11 @@ class Two_Armed_Bandit():
         return reward,done,self.timestep
 
 
-################
-# LSTM NETWORK #
-################
+####################
+# LSTM-RNN NETWORK #
+####################
 
-class LSTM_Network():
+class LSTM_RNN_Network():
     def __init__(self,n_actions,scope,trainer):
         with tf.variable_scope(scope):
             #Input and visual encoding layers
@@ -164,7 +167,7 @@ class LSTM_Network():
                 weights_initializer=normalized_columns_initializer(1.0),
                 biases_initializer=None)
             
-            #Only the agent network need ops for loss functions and gradient updating.
+            # Only the agent network need ops for loss functions and gradient updating.
             if scope != 'master':
                 self.target_v = tf.placeholder(shape=[None],dtype=tf.float32)
                 self.advantages = tf.placeholder(shape=[None],dtype=tf.float32)
@@ -209,22 +212,21 @@ class A2C_Agent():
         self.summary_writer = tf.summary.FileWriter(summary_path+"/"+self.name)   # store summaries for each agent
 
         #Create the local copy of the network and the tensorflow op to copy master paramters to local network
-        self.local_AC = LSTM_Network(n_actions,self.name,trainer)
+        self.local_AC = LSTM_RNN_Network(n_actions,self.name,trainer)
         self.update_local_ops = update_target_graph('master',self.name)        
         self.env = game
         
-    def train(self,rollout,sess,gamma,bootstrap_value):
-        rollout = np.array(rollout)
-        actions = rollout[:,0]
-        rewards = rollout[:,1]
-        timesteps = rollout[:,2]
+    def train(self,episode_buffer,sess,gamma,bootstrap_value):
+        timesteps = episode_buffer[:,0]
+        actions = episode_buffer[:,1]
+        rewards = episode_buffer[:,2]
+        values = episode_buffer[:,3]
         prev_rewards = [0] + rewards[:-1].tolist()
         prev_actions = [0] + actions[:-1].tolist()
-        values = rollout[:,4]
         
         self.pr = prev_rewards
         self.pa = prev_actions
-        # Here we take the rewards and values from the rollout, and use them to 
+        # Here we take the rewards and values from the episode_buffer, and use them to 
         # generate the advantage and discounted returns. 
         # The advantage function uses "Generalized Advantage Estimation"
         self.rewards_plus = np.asarray(rewards.tolist() + [bootstrap_value])
@@ -254,7 +256,12 @@ class A2C_Agent():
             self.local_AC.var_norms,
             self.local_AC.apply_grads],
             feed_dict=feed_dict)
-        return t_l / len(rollout), v_l / len(rollout), p_l / len(rollout), e_l / len(rollout), g_n, v_n
+        t_l /= episode_buffer.shape[0]
+        v_l /= episode_buffer.shape[0]
+        p_l /= episode_buffer.shape[0]
+        e_l /= episode_buffer.shape[0] 
+
+        return t_l, v_l, p_l, e_l, g_n, v_n
         
     def work(self,gamma,sess,coord,saver,train):
         episode_count_global = sess.run(self.global_episodes) # refer to global episode count over all agents
@@ -296,16 +303,32 @@ class A2C_Agent():
                     
                     rnn_state = rnn_state_new
                     r,d,t = self.env.pullArm(a)                        
-                    episode_buffer.append([a,r,t,d,v[0,0]])
+                    #episode_buffer.append([a,r,t,d,v[0,0]])
+                    episode_buffer.append([t,a,r,v[0,0]])
                     episode_values.append(v[0,0])
-                    episode_frames.append(set_image_bandit(episode_reward,self.env.bandit,a,t))
+                    episode_frames.append(set_image_bandit(episode_reward,bandit,a,t))
                     episode_reward[a] += r
                     agent_steps += 1
                     episode_steps += 1
+
+                # save episode buffer
+                episode_buffer=np.array(episode_buffer)
+                df_episode = pd.DataFrame(episode_buffer)
+                df_episode.columns = ['timestep', 'action', 'reward', 'value']
+                df_episode.insert(loc=1, column='arm0_prob', value=bandit[0])
+                df_episode.insert(loc=2, column='arm1_prob', value=bandit[1])
+                df_episode.insert(loc=0, column='agent', value=self.id)
+                df_episode.insert(loc=0, column='episode_count', value=episode_count_global)
+                df_episode.ix[:,['episode_count','agent','timestep','action']]=df_episode.ix[:,['episode_count','agent','timestep','action']].astype('int64')
+
+                hdf=pd.HDFStore(activity_path+'/activity.h5')
+                hdf.put('activity',df_episode,format='table',append=True,data_columns=True)
+                hdf.close()
                 
                 # train the network using the experience buffer at the end of the episode.
-                if len(episode_buffer) != 0 and train == True:
-                    t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,0.0)
+                #if len(episode_buffer) != 0 and train == True:
+                if train == True:
+                    t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,bootstrap_value=0.0)
 
                 # Save information of the episode
                 summary_episode = tf.Summary()
@@ -351,7 +374,7 @@ with tf.device("/cpu:0"):
     global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of episodes in agent_0 defined outside A2C_Agent class
     #trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
     trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
-    master_network = LSTM_Network(n_actions,'master',None) # Generate master network
+    master_network = LSTM_RNN_Network(n_actions,'master',None) # Generate master network
     #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
     
     agents = []
