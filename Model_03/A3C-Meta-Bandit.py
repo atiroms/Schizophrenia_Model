@@ -1,8 +1,13 @@
-# Description
+###############
+# DESCRIPTION #
+###############
+
 # python code modified from awjuliani/meta-RL implementation of meta reinforcement learning
 
 
-# Parameters
+##############
+# PARAMETERS #
+##############
 
 #n_agents = 1       # number of agents that acts in parallel
 n_agents = 2
@@ -10,11 +15,11 @@ n_actions = 2       # choice of actions
 n_cells_lstm = 48   # number of cells in LSTM network
 
 #gamma = .8
-gamma = .9          # discount rate for advantage estimation and reward discounting
-#learning_rate = 1e-3   # awjuliani/meta-RL (Adam optimzer)
-learning_rate = 0.0007  # Wang Nat Neurosci 2018 (RMSProp optimizer)
-cost_statevalue_estimate = 0.05
-cost_entropy = 0.05
+gamma = .9                      # discount rate for advantage estimation and reward discounting
+#learning_rate = 1e-3           # awjuliani/meta-RL (Adam optimzer)
+learning_rate = 0.0007          # Wang Nat Neurosci 2018 (RMSProp optimizer)
+cost_statevalue_estimate = 0.05 #0.025 in awjuliani/meta-RL
+cost_entropy = 0.05             # 0.05 in awjuliani/meta-RL
 
 #load_model = True  # load trained model
 load_model = False  # train model from scratch
@@ -24,7 +29,9 @@ train = True        # enable training using the slow RL
 #train = False      # disable training using the slow RL
 
 
-# Libraries
+#############
+# LIBRARIES #
+#############
 
 import os
 import threading
@@ -39,7 +46,9 @@ import time
 from functions.helper import *
 
 
-# Directory Organization
+##########################
+# DIRECTORY ORGANIZATION #
+##########################
 
 saved_data_path="./saved_data/"+"{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
 model_path=saved_data_path+"/model"
@@ -55,7 +64,9 @@ if not os.path.exists(summary_path):
     os.makedirs(summary_path)
 
 
-# Environment of Dependent Bandit
+###################################
+# ENVIRONMENT OF DEPENDENT BANDIT #
+###################################
 
 class Dependent_Bandit():
     def __init__(self,difficulty):
@@ -100,9 +111,11 @@ class Dependent_Bandit():
         return reward,done,self.timestep
 
 
-# Actor-Critic Network
+###################
+# LSTM-AC NETWORK #
+###################
 
-class AC_Network():
+class LSTM_AC_Network():
     def __init__(self,n_actions,scope,trainer):
         with tf.variable_scope(scope):
             #Input and visual encoding layers
@@ -172,12 +185,14 @@ class AC_Network():
                 self.apply_grads = trainer.apply_gradients(zip(grads,master_vars))
 
 
-# Agent
+#############
+# A2C AGENT #
+#############
 
 class Agent():
     def __init__(self,game,id,n_actions,trainer,model_path,global_episodes):
+        self.id = id  
         self.name = "agent_" + str(id)
-        self.id = id        
         self.model_path = model_path
         self.trainer = trainer
         self.global_episodes = global_episodes
@@ -185,10 +200,10 @@ class Agent():
         #self.episode_rewards = []
         #self.episode_lengths = []
         #self.episode_mean_values = []
-        self.summary_writer = tf.summary.FileWriter(summary_path+"/agent_"+str(self.id))   # store summaries for each agent
+        self.summary_writer = tf.summary.FileWriter(summary_path+"/"+self.name)   # store summaries for each agent
 
         #Create the local copy of the network and the tensorflow op to copy master paramters to local network
-        self.local_AC = AC_Network(n_actions,self.name,trainer)
+        self.local_AC = LSTM_AC_Network(n_actions,self.name,trainer)
         self.update_local_ops = update_target_graph('master',self.name)        
         self.env = game
         
@@ -244,8 +259,7 @@ class Agent():
             while not coord.should_stop():
                 episode_count_global = sess.run(self.global_episodes)   # refer to global episode count over all agents
                 sess.run(self.increment)                                # add to global global_episodes
-                if self.name == 'agent_0':
-                    print("Running global episode: " + str(episode_count_global) + ", " + self.name + " local episode: " + str(episode_count_local)+ "          ", end="\r")
+                print("Running global episode: " + str(episode_count_global) + ", " + self.name + " local episode: " + str(episode_count_local)+ "          ", end="\r")
                 t_start = time.time()
                 sess.run(self.update_local_ops) # copy master graph to local
                 episode_buffer = []
@@ -288,9 +302,9 @@ class Agent():
                 # Save performance coefficients of the episode
                 summary = tf.Summary()
                 summary.value.add(tag="Performance/Reward", simple_value=float(np.sum(episode_reward)))
-                summary.value.add(tag="Performance/Step Length", simple_value=int(episode_steps))
                 summary.value.add(tag="Performance/Mean State-Action Value", simple_value=float(np.mean(episode_values)))
-                summary.value.add(tag="Performance/Calculation Time", simple_value=float(time.time()-t_start))
+                summary.value.add(tag="Simulation/Step Length", simple_value=int(episode_steps))
+                summary.value.add(tag="Simulation/Calculation Time", simple_value=float(time.time()-t_start))
                 if train == True:
                     summary.value.add(tag="Loss/Total Loss", simple_value=float(t_l))
                     summary.value.add(tag="Loss/Value Loss", simple_value=float(v_l))
@@ -298,7 +312,7 @@ class Agent():
                     summary.value.add(tag="Loss/Entropy", simple_value=float(e_l))
                     summary.value.add(tag="Loss/Gradient L2Norm", simple_value=float(g_n))
                     summary.value.add(tag="Loss/Variable L2Norm", simple_value=float(v_n))
-                self.summary_writer.add_summary(summary, episode_count_local)
+                self.summary_writer.add_summary(summary, episode_count_global)
                 self.summary_writer.flush()
                     
                 # save model parameters
@@ -315,7 +329,9 @@ class Agent():
                 episode_count_local += 1        # add to local episode_count in all agents
 
 
-# Main code
+#############
+# MAIN CODE #
+#############
 
 tf.reset_default_graph()
 
@@ -325,7 +341,7 @@ with tf.device("/cpu:0"):
     global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of episodes in agent_0 defined outside Agent class
     #trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
     trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
-    master_network = AC_Network(n_actions,'master',None) # Generate master network
+    master_network = LSTM_AC_Network(n_actions,'master',None) # Generate master network
     #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
     
     agents = []
@@ -352,4 +368,4 @@ with tf.Session() as sess:
         agent_threads.append(thread)
     coord.join(agent_threads)
 
-# End of code
+# END OF FILE
