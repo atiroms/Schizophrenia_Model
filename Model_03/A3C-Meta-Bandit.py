@@ -18,7 +18,7 @@ n_cells_lstm = 48               # number of cells in LSTM-RNN network
 gamma = .9                      # discount rate for advantage estimation and reward discounting
 #learning_rate = 1e-3           # awjuliani/meta-RL (Adam optimzer)
 learning_rate = 0.0007          # Wang Nat Neurosci 2018 (RMSProp optimizer)
-cost_statevalue_estimate = 0.05 # 0.025 in awjuliani/meta-RL
+cost_statevalue_estimate = 0.05 # 0.25 in awjuliani/meta-RL
 cost_entropy = 0.05             # 0.05 in awjuliani/meta-RL
 
 #load_model = True              # load trained model
@@ -264,31 +264,31 @@ class A2C_Agent():
         return t_l, v_l, p_l, e_l, g_n, v_n
         
     def work(self,gamma,sess,coord,saver,train):
-        episode_count_global = sess.run(self.global_episodes) # refer to global episode count over all agents
+        episode_count_global = sess.run(self.global_episodes)           # refer to global episode counter over all agents
         episode_count_local = 0
         agent_steps = 0
         print("Starting " + self.name + "                    ")
         with sess.as_default(), sess.graph.as_default():                 
-            while not coord.should_stop():      # iterate over episodes
-                episode_count_global = sess.run(self.global_episodes)   # refer to global episode count over all agents
-                sess.run(self.increment)                                # add to global global_episodes
+            while not coord.should_stop():                              # iterate over episodes
+                episode_count_global = sess.run(self.global_episodes)   # refer to global episode counter over all agents
+                sess.run(self.increment)                                # add to global episode counter
                 print("Running global episode: " + str(episode_count_global) + ", " + self.name + " local episode: " + str(episode_count_local)+ "          ", end="\r")
                 t_start = time.time()
-                sess.run(self.update_local_ops) # copy master graph to local
+                sess.run(self.update_local_ops)                         # copy master graph to local
                 episode_buffer = []
                 episode_values = []
                 episode_frames = []
                 episode_reward = [0,0]
-                episode_steps = 0   # counter of steps within an episode
+                episode_steps = 0                                       # counter of steps within an episode
                 d = False
                 r = 0
                 a = 0
                 t = 0
-                bandit = self.env.reset()   # returns np.array of bandit probabilities
+                bandit = self.env.reset()                               # returns np.array of bandit probabilities
                 rnn_state = self.local_AC.state_init
                 
                 # act
-                while d == False: # d is "done" flag returned from the environment
+                while d == False:                                       # d is "done" flag returned from the environment
                     #Take an action using probabilities from policy network output.
                     a_dist,v,rnn_state_new = sess.run(
                         [self.local_AC.policy,self.local_AC.value,self.local_AC.state_out], 
@@ -344,7 +344,7 @@ class A2C_Agent():
                     summary_episode.value.add(tag="Loss/Total Loss", simple_value=float(t_l))
                     summary_episode.value.add(tag="Loss/Value Loss", simple_value=float(v_l))
                     summary_episode.value.add(tag="Loss/Policy Loss", simple_value=float(p_l))
-                    summary_episode.value.add(tag="Loss/Entropy", simple_value=float(e_l))
+                    summary_episode.value.add(tag="Loss/Policy Entropy", simple_value=float(e_l))
                     summary_episode.value.add(tag="Loss/Gradient L2Norm", simple_value=float(g_n))
                     summary_episode.value.add(tag="Loss/Variable L2Norm", simple_value=float(v_n))
                 self.summary_writer.add_summary(summary_episode, episode_count_global)
@@ -361,7 +361,7 @@ class A2C_Agent():
                     make_gif(self.images,pics_path+'/image'+str(episode_count_local)+'.gif',
                         duration=len(self.images)*0.1,true_image=True)
 
-                episode_count_local += 1        # add to local episode_count in all agents
+                episode_count_local += 1        # add to local counter in all agents
 
 
 #############
@@ -373,7 +373,7 @@ tf.reset_default_graph()
 # Setup agents for multiple threading
 with tf.device("/cpu:0"): 
 #with tf.device("/device:GPU:0"): 
-    global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of episodes in agent_0 defined outside A2C_Agent class
+    global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of total episodes defined outside A2C_Agent class
     #trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
     trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
     master_network = LSTM_RNN_Network(n_actions,'master',None) # Generate master network
