@@ -311,8 +311,15 @@ class A2C_Agent():
                     agent_steps += 1
                     episode_steps += 1
 
-                # save episode buffer
                 episode_buffer=np.array(episode_buffer)
+                
+                # train the network using the experience buffer at the end of the episode.
+                #if len(episode_buffer) != 0 and train == True:
+                if train == True:
+                    t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,bootstrap_value=0.0)
+
+
+                # save activity
                 df_episode = pd.DataFrame(episode_buffer)
                 df_episode.columns = ['timestep', 'action', 'reward', 'value']
                 df_episode.insert(loc=1, column='arm0_prob', value=bandit[0])
@@ -324,11 +331,6 @@ class A2C_Agent():
                 hdf=pd.HDFStore(activity_path+'/activity.h5')
                 hdf.put('activity',df_episode,format='table',append=True,data_columns=True)
                 hdf.close()
-                
-                # train the network using the experience buffer at the end of the episode.
-                #if len(episode_buffer) != 0 and train == True:
-                if train == True:
-                    t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,bootstrap_value=0.0)
 
                 # Save information of the episode
                 summary_episode = tf.Summary()
