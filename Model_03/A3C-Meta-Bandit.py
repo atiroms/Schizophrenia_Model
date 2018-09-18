@@ -30,6 +30,9 @@ train = True                    # enable training using the slow RL
 
 bandit_difficulty="uniform"     # select "independent" for independent bandit
 
+interval_ckpt = 1000
+interval_pic = 100
+
 
 #############
 # LIBRARIES #
@@ -305,30 +308,30 @@ class A2C_Agent():
                     t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,0.0)
 
                 # Save information of the episode
-                summary = tf.Summary()
-                summary.value.add(tag="Performance/Reward", simple_value=float(np.sum(episode_reward)))
-                summary.value.add(tag="Performance/Mean State-Action Value", simple_value=float(np.mean(episode_values)))
-                summary.value.add(tag="Simulation/Calculation Time", simple_value=float(time.time()-t_start))
-                summary.value.add(tag="Environment/Step Length", simple_value=int(episode_steps))
-                summary.value.add(tag="Environment/Arm0 Probability", simple_value=float(bandit[0]))
-                summary.value.add(tag="Environment/Arm1 Probability", simple_value=float(bandit[1]))
+                summary_episode = tf.Summary()
+                summary_episode.value.add(tag="Performance/Reward", simple_value=float(np.sum(episode_reward)))
+                summary_episode.value.add(tag="Performance/Mean State-Action Value", simple_value=float(np.mean(episode_values)))
+                summary_episode.value.add(tag="Simulation/Calculation Time", simple_value=float(time.time()-t_start))
+                summary_episode.value.add(tag="Environment/Step Length", simple_value=int(episode_steps))
+                summary_episode.value.add(tag="Environment/Arm0 Probability", simple_value=float(bandit[0]))
+                summary_episode.value.add(tag="Environment/Arm1 Probability", simple_value=float(bandit[1]))
                 if train == True:
-                    summary.value.add(tag="Loss/Total Loss", simple_value=float(t_l))
-                    summary.value.add(tag="Loss/Value Loss", simple_value=float(v_l))
-                    summary.value.add(tag="Loss/Policy Loss", simple_value=float(p_l))
-                    summary.value.add(tag="Loss/Entropy", simple_value=float(e_l))
-                    summary.value.add(tag="Loss/Gradient L2Norm", simple_value=float(g_n))
-                    summary.value.add(tag="Loss/Variable L2Norm", simple_value=float(v_n))
-                self.summary_writer.add_summary(summary, episode_count_global)
+                    summary_episode.value.add(tag="Loss/Total Loss", simple_value=float(t_l))
+                    summary_episode.value.add(tag="Loss/Value Loss", simple_value=float(v_l))
+                    summary_episode.value.add(tag="Loss/Policy Loss", simple_value=float(p_l))
+                    summary_episode.value.add(tag="Loss/Entropy", simple_value=float(e_l))
+                    summary_episode.value.add(tag="Loss/Gradient L2Norm", simple_value=float(g_n))
+                    summary_episode.value.add(tag="Loss/Variable L2Norm", simple_value=float(v_n))
+                self.summary_writer.add_summary(summary_episode, episode_count_global)
                 self.summary_writer.flush()
                     
                 # save model parameters
-                if episode_count_local % 500 == 0 and episode_count_local != 0 and self.name == 'agent_0' and train == True:
+                if episode_count_local % interval_ckpt == 0 and episode_count_local != 0 and self.name == 'agent_0' and train == True:
                     saver.save(sess,self.model_path+'/model-'+str(episode_count_local)+'.ckpt')
                     print("Saved model parameters                                        ")
 
                 # save gif image of fast learning
-                if episode_count_local % 100 == 0 and episode_count_local != 0 and self.name == 'agent_0':
+                if episode_count_local % interval_pic == 0 and episode_count_local != 0 and self.name == 'agent_0':
                     self.images = np.array(episode_frames)
                     make_gif(self.images,pics_path+'/image'+str(episode_count_local)+'.gif',
                         duration=len(self.images)*0.1,true_image=True)
