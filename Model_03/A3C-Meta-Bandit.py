@@ -16,8 +16,10 @@ n_cells_lstm = 48               # number of cells in LSTM-RNN network
 
 #gamma = .8
 gamma = .9                      # discount rate for advantage estimation and reward discounting
-#learning_rate = 1e-3           # awjuliani/meta-RL (Adam optimzer)
+optimizer = "RMSProp"           # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
+#optimizer = "Adam"
 learning_rate = 0.0007          # Wang Nat Neurosci 2018 (RMSProp optimizer)
+#learning_rate = 1e-3           # awjuliani/meta-RL (Adam optimzer)
 cost_statevalue_estimate = 0.05 # 0.25 in awjuliani/meta-RL
 cost_entropy = 0.05             # 0.05 in awjuliani/meta-RL
 
@@ -374,8 +376,10 @@ tf.reset_default_graph()
 with tf.device("/cpu:0"): 
 #with tf.device("/device:GPU:0"): 
     global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of total episodes defined outside A2C_Agent class
-    #trainer = tf.train.AdamOptimizer(learning_rate=1e-3)
-    trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
+    if optimizer == "Adam":
+        trainer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+    elif optimizer == "RMSProp":
+        trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
     master_network = LSTM_RNN_Network(n_actions,'master',None) # Generate master network
     #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
     
