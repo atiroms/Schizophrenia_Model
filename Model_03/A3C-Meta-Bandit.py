@@ -319,7 +319,7 @@ class A2C_Agent():
                     t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,bootstrap_value=0.0)
 
 
-                # save activity
+                # Save activity in /activity/activity.h5 file
                 df_episode = pd.DataFrame(episode_buffer)
                 df_episode.columns = ['timestep', 'action', 'reward', 'value']
                 df_episode.insert(loc=1, column='arm0_prob', value=bandit[0])
@@ -332,7 +332,7 @@ class A2C_Agent():
                 hdf.put('activity',df_episode,format='table',append=True,data_columns=True)
                 hdf.close()
 
-                # Save information of the episode
+                # Save episode summary in /summary folder
                 summary_episode = tf.Summary()
                 summary_episode.value.add(tag="Performance/Reward", simple_value=float(np.sum(episode_reward)))
                 summary_episode.value.add(tag="Performance/Mean State-Action Value", simple_value=float(np.mean(episode_values)))
@@ -351,14 +351,14 @@ class A2C_Agent():
                 self.summary_writer.flush()
                     
                 # save model parameters
-                if episode_count_local % interval_ckpt == 0 and episode_count_local != 0 and self.name == 'agent_0' and train == True:
-                    saver.save(sess,self.model_path+'/model-'+str(episode_count_local)+'.ckpt')
+                if episode_count_global % interval_ckpt == 0 and train == True:
+                    saver.save(sess,self.model_path+'/'+str(episode_count_global)+'.ckpt')
                     print("Saved model parameters                                        ")
 
                 # save gif image of fast learning
-                if episode_count_local % interval_pic == 0 and episode_count_local != 0 and self.name == 'agent_0':
+                if episode_count_global % interval_pic == 0:
                     self.images = np.array(episode_frames)
-                    make_gif(self.images,pics_path+'/image'+str(episode_count_local)+'.gif',
+                    make_gif(self.images,pics_path+'/'+str(episode_count_global)+'.gif',
                         duration=len(self.images)*0.1,true_image=True)
 
                 episode_count_local += 1        # add to local counter in all agents
