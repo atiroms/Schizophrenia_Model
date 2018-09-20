@@ -14,14 +14,15 @@ n_agents = 1                   # number of agents that acts in parallel
 n_actions = 2                   # choice of actions
 n_cells_lstm = 48               # number of cells in LSTM-RNN network
 
-#gamma = .8
-gamma = .9                      # discount rate for advantage estimation and reward discounting
-optimizer = "RMSProp"           # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
-#optimizer = "Adam"
-learning_rate = 0.0007          # Wang Nat Neurosci 2018 (RMSProp optimizer)
-#learning_rate = 1e-3           # awjuliani/meta-RL (Adam optimzer)
-cost_statevalue_estimate = 0.05 # 0.25 in awjuliani/meta-RL
-cost_entropy = 0.05             # 0.05 in awjuliani/meta-RL
+gamma = .8                     # 0.8 in awjuliani/meta-RL
+#gamma = .9                      # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
+#optimizer = "RMSProp"           # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
+optimizer = "Adam"
+#learning_rate = 0.0007          # Wang Nat Neurosci 2018
+learning_rate = 1e-3           # awjuliani/meta-RL
+#cost_statevalue_estimate = 0.05 # 0.05 in Wang 2018, 0.25 in awjuliani/meta-RL
+cost_statevalue_estimate = 0.25
+cost_entropy = 0.05             # 0.05 in Wang 2018 and awjuliani/meta-RL
 
 #load_model = True              # load trained model
 load_model = False              # train model from scratch
