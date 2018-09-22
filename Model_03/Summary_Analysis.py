@@ -18,6 +18,9 @@ data_path = './saved_data/20180920_130605/summary'
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+#import matplotlib.pyplot as plt
+import plotly as py
+import cufflinks as cf
 import glob
 import os
 
@@ -37,6 +40,18 @@ for p in data_paths:
         df.loc[int(e.step)]=data
 
 
+#################
+# VISUALIZATION #
+#################
+
+#cf.set_config_file(offline=True, theme="white", offline_show_link=False)
+#cf.go_offline()
+
+#df.plot(x='Simulation/Global Episode Count', y='Performance/Reward')
+#plt.show()
+
+#df.iplot(kind="scatter", mode='markers', x='Simulation/Global Episode Count', y='Performance/Reward')
 
 
-
+fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Performance/Reward')
+py.offline.plot(fig, filename='simple-line')

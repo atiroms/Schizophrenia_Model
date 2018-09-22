@@ -74,6 +74,7 @@ if not os.path.exists(summary_path):
 if not os.path.exists(activity_path):
     os.makedirs(activity_path)
 
+
 ###################################
 # ENVIRONMENT OF TWO-ARMED BANDIT #
 ###################################
