@@ -54,4 +54,4 @@ for p in data_paths:
 
 
 fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Performance/Reward')
-py.offline.plot(fig, filename='simple-line')
+py.offline.plot(fig, filename='example_scatter')

@@ -14,7 +14,7 @@ xpu='/cpu:0'                    # processing device allocation
 
 n_agents = 1                   # number of agents that acts in parallel
 #n_agents = 2
-n_actions = 2                   # choice of actions
+
 n_cells_lstm = 48               # number of cells in LSTM-RNN network
 
 gamma = .8                     # 0.8 in awjuliani/meta-RL
@@ -110,7 +110,7 @@ class Two_Armed_Bandit():
 
         return self.bandit
         
-    def pullArm(self,action):
+    def step(self,action):
         #Get a random number.
         if self.difficulty == "restless": self.set_restless_prob()  # sample from random walk list
         self.timestep += 1
@@ -206,8 +206,10 @@ class LSTM_RNN_Network():
 #############
 
 class A2C_Agent():
-    def __init__(self,game,id,n_actions,trainer,model_path,global_episodes):
-        self.id = id  
+    def __init__(self,environment,id,trainer,model_path,global_episodes):
+        self.env = environment
+        self.n_actions=self.env.n_actions
+        self.id = id
         self.name = "agent_" + str(id)
         self.model_path = model_path
         self.trainer = trainer
@@ -219,9 +221,9 @@ class A2C_Agent():
         self.summary_writer = tf.summary.FileWriter(summary_path+"/"+self.name)   # store summaries for each agent
 
         #Create the local copy of the network and the tensorflow op to copy master paramters to local network
-        self.local_AC = LSTM_RNN_Network(n_actions,self.name,trainer)
+        self.local_AC = LSTM_RNN_Network(self.n_actions,self.name,trainer)
         self.update_local_ops = update_target_graph('master',self.name)        
-        self.env = game
+        
         
     def train(self,episode_buffer,sess,gamma,bootstrap_value):
         timesteps = episode_buffer[:,0]
@@ -309,7 +311,7 @@ class A2C_Agent():
                     a = np.argmax(a_dist == a)
                     
                     rnn_state = rnn_state_new
-                    r,d,t = self.env.pullArm(a)                        
+                    r,d,t = self.env.step(a)                        
                     #episode_buffer.append([a,r,t,d,v[0,0]])
                     episode_buffer.append([t,a,r,v[0,0]])
                     episode_values.append(v[0,0])
@@ -384,13 +386,15 @@ with tf.device(xpu):
         trainer = tf.train.AdamOptimizer(learning_rate=learning_rate)
     elif optimizer == "RMSProp":
         trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
-    master_network = LSTM_RNN_Network(n_actions,'master',None) # Generate master network
+    
+    master_network = LSTM_RNN_Network(Two_Armed_Bandit(bandit_difficulty).n_actions,'master',None) # Generate master network
     #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
     
     agents = []
     # Create A2C_Agent classes
     for i in range(n_agents):
-        agents.append(A2C_Agent(Two_Armed_Bandit(bandit_difficulty),i,n_actions,trainer,model_path,global_episodes))
+        agents.append(A2C_Agent(Two_Armed_Bandit(bandit_difficulty),i,trainer,model_path,global_episodes))
+
     saver = tf.train.Saver(max_to_keep=5)
 
 # Run agents
