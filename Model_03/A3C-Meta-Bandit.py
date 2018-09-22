@@ -398,20 +398,26 @@ with tf.device(xpu):
 # Run agents
 config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
 with tf.Session(config=config) as sess:
-    coord = tf.train.Coordinator()
+    
     if load_model == True:
         print('Loading Model...')
         ckpt = tf.train.get_checkpoint_state(load_model_path)
         saver.restore(sess,ckpt.model_checkpoint_path)
     else:
         sess.run(tf.global_variables_initializer())
-        
-    agent_threads = []
-    for agent in agents:
-        agent_work = lambda: agent.work(gamma,sess,coord,saver,train)
-        thread = threading.Thread(target=(agent_work))
-        thread.start()
-        agent_threads.append(thread)
-    coord.join(agent_threads)
+    
+    coord = tf.train.Coordinator()
+    if xpu=='/gpu:0' and n_agents==1:
+        agents[0].work(gamma,sess,coord,saver,train)
+    elif xpu=='/gpu:0' and n_agents>1:
+        raise ValueError('Multi-threading not allowed with GPU')
+    else:
+        agent_threads = []
+        for agent in agents:
+            agent_work = lambda: agent.work(gamma,sess,coord,saver,train)
+            thread = threading.Thread(target=(agent_work))
+            thread.start()
+            agent_threads.append(thread)
+        coord.join(agent_threads)
 
 # END OF FILE

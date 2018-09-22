@@ -23,6 +23,6 @@ import pandas as pd
 # DATA_LOADING #
 ################
 
-df = pd.HDFStore(data_path)
+hdf = pd.HDFStore(data_path)
 df = pd.DataFrame(df['activity'])
-
+hdf.close()
