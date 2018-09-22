@@ -12,6 +12,10 @@
 xpu='/cpu:0'                    # processing device allocation
 #xpu='/gpu:0'
 
+train=True
+load_model=False
+load_model_path='./saved_data/20180917_011631'
+
 n_agents = 1                   # number of agents that acts in parallel
 #n_agents = 2
 
@@ -373,8 +377,7 @@ class A2C_Agent():
 tf.reset_default_graph()
 
 # Setup agents for multiple threading
-with tf.device("/cpu:0"): 
-#with tf.device("/device:GPU:0"): 
+with tf.device(xpu):
     global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of total episodes defined outside A2C_Agent class
     if optimizer == "Adam":
         trainer = tf.train.AdamOptimizer(learning_rate=learning_rate)
@@ -393,7 +396,8 @@ with tf.device("/cpu:0"):
 
 
 # Run agents
-with tf.Session() as sess:
+config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
+with tf.Session(config=config) as sess:
     coord = tf.train.Coordinator()
     if load_model == True:
         print('Loading Model...')
