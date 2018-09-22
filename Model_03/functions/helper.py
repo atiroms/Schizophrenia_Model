@@ -8,6 +8,7 @@ import os
 import csv
 import itertools
 import tensorflow.contrib.slim as slim
+import moviepy.editor as mpy
 from PIL import Image
 from PIL import ImageDraw 
 from PIL import ImageFont
@@ -39,7 +40,7 @@ def normalized_columns_initializer(std=1.0):
 
 #This code allows gifs to be saved of the training episode for use in the Control Center.
 def make_gif(images, fname, duration=2, true_image=False):
-  import moviepy.editor as mpy
+  #import moviepy.editor as mpy
   
   def make_frame(t):
     try:
@@ -53,7 +54,7 @@ def make_gif(images, fname, duration=2, true_image=False):
       return ((x+1)/2*255).astype(np.uint8)
   
   clip = mpy.VideoClip(make_frame, duration=duration)
-  clip.write_gif(fname, fps = len(images) / duration,verbose=False)
+  clip.write_gif(fname, fps = len(images) / duration, verbose=False, progress_bar=False)
 
 def set_image_bandit(values,probs,selection,trial):
     bandit_image = Image.open('./resources/bandit.png')
