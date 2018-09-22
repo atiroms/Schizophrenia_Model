@@ -27,13 +27,6 @@ learning_rate = 1e-3           # awjuliani/meta-RL
 cost_statevalue_estimate = 0.25
 cost_entropy = 0.05             # 0.05 in Wang 2018 and awjuliani/meta-RL
 
-#load_model = True              # load trained model
-load_model = False              # train model from scratch
-load_model_path = "./saved_data/20180917_011631"
-
-train = True                    # enable training using the slow RL
-#train = False                  # disable training using the slow RL
-
 bandit_difficulty="uniform"     # select "independent" for independent bandit
 
 interval_ckpt = 1000
@@ -380,7 +373,8 @@ class A2C_Agent():
 tf.reset_default_graph()
 
 # Setup agents for multiple threading
-with tf.device(xpu): 
+with tf.device("/cpu:0"): 
+#with tf.device("/device:GPU:0"): 
     global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of total episodes defined outside A2C_Agent class
     if optimizer == "Adam":
         trainer = tf.train.AdamOptimizer(learning_rate=learning_rate)
@@ -397,9 +391,9 @@ with tf.device(xpu):
 
     saver = tf.train.Saver(max_to_keep=5)
 
+
 # Run agents
-config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)     # for processing allocation visualization
-with tf.Session(config=config) as sess:
+with tf.Session() as sess:
     coord = tf.train.Coordinator()
     if load_model == True:
         print('Loading Model...')
