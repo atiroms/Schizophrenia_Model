@@ -27,7 +27,7 @@ gamma = .8                     # 0.8 in awjuliani/meta-RL
 optimizer = "Adam"
 #learning_rate = 0.0007          # Wang Nat Neurosci 2018
 learning_rate = 1e-3           # awjuliani/meta-RL
-#cost_statevalue_estimate = 0.05 # 0.05 in Wang 2018, 0.25 in awjuliani/meta-RL
+#cost_statevalue_estimate = 0.05 # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
 cost_statevalue_estimate = 0.25
 cost_entropy = 0.05             # 0.05 in Wang 2018 and awjuliani/meta-RL
 
@@ -183,7 +183,7 @@ class LSTM_RNN_Network():
                 #self.policy_loss = -tf.reduce_sum(tf.log(self.responsible_outputs + 1e-7)*self.advantages)
                 #self.loss = 0.5 *self.value_loss + self.policy_loss - self.entropy * 0.05
                 self.policy_loss = - tf.reduce_sum(tf.log(self.responsible_outputs + 1e-10)*self.advantages) # advantage as a constant 
-                self.value_loss = tf.reduce_sum(tf.square(self.target_v - tf.reshape(self.value,[-1]))) # advantage as a variable
+                self.value_loss = 0.5 * tf.reduce_sum(tf.square(self.target_v - tf.reshape(self.value,[-1]))) # advantage as a variable. this expression is equivalent to Wang 2018 method
                 self.entropy = - tf.reduce_sum(self.policy * tf.log(self.policy + 1e-10))
                 self.loss = self.policy_loss + cost_statevalue_estimate * self.value_loss - cost_entropy * self.entropy
 
