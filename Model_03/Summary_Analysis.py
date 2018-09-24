@@ -9,8 +9,11 @@
 # PARAMETERS #
 ##############
 
-#data_path = './saved_data/20180920_130605/summary'
-data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180921_011111/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180914_000352/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180918_211807/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180921_011111/summary'
+data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180923_114142/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630/summary'
 
 
 #############
@@ -34,21 +37,28 @@ import os
 data_paths = glob.glob(os.path.join(data_path, "*", "event*"))
 
 for p in data_paths:
+    count=0
     for e in tf.train.summary_iterator(p):
         print("Extracting episode " + str(int(e.step)), end="\r")
-        if e.step==0:
+        if count==1:
+        #if count==0:
             colnames=['Simulation/Global Episode Count']+[v.tag for v in e.summary.value]
             df=pd.DataFrame(columns=colnames)
-        data=[e.step]+[v.simple_value for v in e.summary.value]
-        df.loc[int(e.step)]=data
+        
+        if count>0:
+        #if count>-1:
+            data=[e.step]+[v.simple_value for v in e.summary.value]
+            df.loc[count]=data
+        count+=1
 
 
-###############
-# DATA SAVING #
-###############
+##############################
+# DATA SAVING IN HDF5 FORMAT #
+##############################
 
-colnames=df.columns.values
-df.columns=list(range(df.shape[1]))
+# '/' cannot be used as column names when stored in hdf5, so column names are stored separately
+colnames=pd.Series(df.columns.values,index=('col'+str(i) for i in range(df.shape[1])))
+df.columns=list('col'+str(i) for i in range(df.shape[1]))
 hdf=pd.HDFStore(data_path+'/summary.h5')
 hdf.put('summary',df,format='table',append=False,data_columns=True)
 hdf.put('colnames',colnames)
@@ -60,7 +70,8 @@ hdf.close()
 ################
 
 hdf = pd.HDFStore(data_path+'/summary.h5')
-df = pd.DataFrame(df['summary'])
+df = pd.DataFrame(hdf['summary'])
+df.columns=hdf['colnames'].tolist()
 hdf.close()
 
 
@@ -78,4 +89,5 @@ hdf.close()
 
 
 fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Performance/Reward')
+#fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Perf/Reward')
 py.offline.plot(fig, filename='example_scatter')

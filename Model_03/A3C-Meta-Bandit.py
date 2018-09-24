@@ -228,8 +228,9 @@ class LSTM_RNN_Network():
                 #self.entropy = - tf.reduce_sum(self.policy * tf.log(self.policy + 1e-7))
                 #self.policy_loss = -tf.reduce_sum(tf.log(self.responsible_outputs + 1e-7)*self.advantages)
                 #self.loss = 0.5 *self.value_loss + self.policy_loss - self.entropy * 0.05
-                self.policy_loss = - tf.reduce_sum(tf.log(self.responsible_outputs + 1e-10)*self.advantages) # advantage as a constant 
-                self.value_loss = 0.5 * tf.reduce_sum(tf.square(self.target_v - tf.reshape(self.value,[-1]))) # advantage as a variable. this expression is equivalent to Wang 2018 method
+                self.policy_loss = - tf.reduce_sum(tf.log(self.responsible_outputs + 1e-10)*self.advantages) # advantage as a constant
+                # advantage as a variable. this expression is equivalent to Wang 2018 method
+                self.value_loss = 0.5 * tf.reduce_sum(tf.square(self.target_v - tf.reshape(self.value,[-1])))
                 self.entropy = - tf.reduce_sum(self.policy * tf.log(self.policy + 1e-10))
                 self.loss = self.policy_loss + param.cost_statevalue_estimate * self.value_loss - param.cost_entropy * self.entropy
 
