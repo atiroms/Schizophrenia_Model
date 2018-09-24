@@ -9,29 +9,15 @@
 # PARAMETERS #
 ##############
 
-xpu='/cpu:0'                    # processing device allocation
-#xpu='/gpu:0'
+#param_set = 'Wang2018'
+param_set = 'awjuliani'
 
-train=True
-load_model=False
-load_model_path='./saved_data/20180917_011631'
+xpu = '/cpu:0'                    # processing device allocation
+#xpu = '/gpu:0'
 
-n_agents = 1                   # number of agents that acts in parallel
-#n_agents = 2
-
-n_cells_lstm = 48               # number of cells in LSTM-RNN network
-
-gamma = .8                     # 0.8 in awjuliani/meta-RL
-#gamma = .9                      # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
-#optimizer = "RMSProp"           # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
-optimizer = "Adam"
-#learning_rate = 0.0007          # Wang Nat Neurosci 2018
-learning_rate = 1e-3           # awjuliani/meta-RL
-#cost_statevalue_estimate = 0.05 # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
-cost_statevalue_estimate = 0.25
-cost_entropy = 0.05             # 0.05 in Wang 2018 and awjuliani/meta-RL
-
-bandit_difficulty="uniform"     # select "independent" for independent bandit
+train = True
+load_model = False
+load_model_path = './saved_data/20180917_011631'
 
 interval_ckpt = 1000
 interval_pic = 100
@@ -52,7 +38,38 @@ import scipy.signal
 import datetime
 import time
 import pandas as pd
+import moviepy.editor as mpy
+from PIL import Image
+from PIL import ImageDraw 
+from PIL import ImageFont
 from functions.helper import *
+
+##############
+# PARAMETERS #
+##############
+
+class Parameters():
+    def __init__(self,param_set):
+        if param_set == 'Wang2018':
+            self.n_agents = 1                       # number of agents that acts in parallel
+            self.n_cells_lstm = 48                  # number of cells in LSTM-RNN network
+            self.gamma = .9                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
+            self.optimizer = "RMSProp"              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
+            self.learning_rate = 0.0007             # Wang Nat Neurosci 2018
+            self.cost_statevalue_estimate = 0.05    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
+            self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
+            self.bandit_difficulty = 'uniform'      # select "independent" for independent bandit
+        elif param_set == 'awjuliani':
+            self.n_agents = 1
+            self.n_cells_lstm = 48                  # number of cells in LSTM-RNN network
+            self.gamma = .8                         # 0.8 in awjuliani/meta-RL
+            self.optimizer = "Adam"
+            self.learning_rate = 1e-3               # awjuliani/meta-RL
+            self.cost_statevalue_estimate = 0.5
+            self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
+            self.bandit_difficulty = 'uniform'
+        else:
+            raise ValueError('Parameter set name not defined.')
 
 
 ##########################
@@ -121,8 +138,37 @@ class Two_Armed_Bandit():
             reward = 0
         if self.timestep > 99: 
             done = True
-        else: done = False
+        else: 
+            done = False
         return reward,done,self.timestep
+    
+    def make_gif(self,buffer,path,count):     
+        font = ImageFont.truetype("./resources/FreeSans.ttf", 24)
+        images=[]
+        r_cumulative=[0,0]
+        for i in range(len(buffer)):
+            r_cumulative[int(buffer[i,1])]+=buffer[i,2]
+            bandit_image = Image.open('./resources/bandit.png')
+            draw = ImageDraw.Draw(bandit_image)
+            draw.text((40, 10),str(float("{0:.2f}".format(self.bandit[0]))),(0,0,0),font=font)
+            draw.text((130, 10),str(float("{0:.2f}".format(self.bandit[1]))),(0,0,0),font=font)
+            draw.text((60, 370),'Trial: ' + str(int(buffer[i,0])),(0,0,0),font=font)
+            bandit_image = np.array(bandit_image)
+            bandit_image[115:115+math.floor(r_cumulative[0]*2.5),20:75,:] = [0,255.0,0] 
+            bandit_image[115:115+math.floor(r_cumulative[1]*2.5),120:175,:] = [0,255.0,0]
+            bandit_image[101:107,10+(int(buffer[i,1])*95):10+(int(buffer[i,1])*95)+80,:] = [80.0,80.0,225.0]
+            images.append(bandit_image)
+        images=np.array(images)
+        filename=path+'/'+str(count)+'.gif'
+        duration=len(images)*0.1
+        def make_frame(t):
+            try:
+                x = images[int(len(images)/duration*t)]
+            except:
+                x = images[-1]
+            return x.astype(np.uint8)
+        clip = mpy.VideoClip(make_frame, duration=duration)
+        clip.write_gif(filename, fps = len(images) / duration, verbose=False, progress_bar=False)
 
 
 ####################
@@ -141,7 +187,7 @@ class LSTM_RNN_Network():
             hidden = tf.concat([self.prev_rewards,self.prev_actions_onehot,self.timestep],1)
             
             #Recurrent network for temporal dependencies
-            lstm_cell = tf.contrib.rnn.BasicLSTMCell(n_cells_lstm,state_is_tuple=True)
+            lstm_cell = tf.contrib.rnn.BasicLSTMCell(param.n_cells_lstm,state_is_tuple=True)
             c_init = np.zeros((1, lstm_cell.state_size.c), np.float32)
             h_init = np.zeros((1, lstm_cell.state_size.h), np.float32)
             self.state_init = [c_init, h_init]
@@ -156,7 +202,7 @@ class LSTM_RNN_Network():
                 time_major=False)
             lstm_c, lstm_h = lstm_state
             self.state_out = (lstm_c[:1, :], lstm_h[:1, :])
-            rnn_out = tf.reshape(lstm_outputs, [-1, n_cells_lstm])
+            rnn_out = tf.reshape(lstm_outputs, [-1, param.n_cells_lstm])
             
             self.actions = tf.placeholder(shape=[None],dtype=tf.int32)
             self.actions_onehot = tf.one_hot(self.actions,n_actions,dtype=tf.float32)
@@ -185,7 +231,7 @@ class LSTM_RNN_Network():
                 self.policy_loss = - tf.reduce_sum(tf.log(self.responsible_outputs + 1e-10)*self.advantages) # advantage as a constant 
                 self.value_loss = 0.5 * tf.reduce_sum(tf.square(self.target_v - tf.reshape(self.value,[-1]))) # advantage as a variable. this expression is equivalent to Wang 2018 method
                 self.entropy = - tf.reduce_sum(self.policy * tf.log(self.policy + 1e-10))
-                self.loss = self.policy_loss + cost_statevalue_estimate * self.value_loss - cost_entropy * self.entropy
+                self.loss = self.policy_loss + param.cost_statevalue_estimate * self.value_loss - param.cost_entropy * self.entropy
 
                 #Get gradients from local network using local losses
                 local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
@@ -283,7 +329,7 @@ class A2C_Agent():
                 sess.run(self.update_local_ops)                         # copy master graph to local
                 episode_buffer = []
                 episode_values = []
-                episode_frames = []
+                #episode_frames = []
                 episode_reward = [0,0]
                 episode_steps = 0                                       # counter of steps within an episode
                 d = False
@@ -312,7 +358,7 @@ class A2C_Agent():
                     #episode_buffer.append([a,r,t,d,v[0,0]])
                     episode_buffer.append([t,a,r,v[0,0]])
                     episode_values.append(v[0,0])
-                    episode_frames.append(set_image_bandit(episode_reward,bandit,a,t))
+                    #episode_frames.append(set_image_bandit(episode_reward,bandit,a,t))
                     episode_reward[a] += r
                     agent_steps += 1
                     episode_steps += 1
@@ -323,7 +369,6 @@ class A2C_Agent():
                 #if len(episode_buffer) != 0 and train == True:
                 if train == True:
                     t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,bootstrap_value=0.0)
-
 
                 # Save activity in /activity/activity.h5 file
                 df_episode = pd.DataFrame(episode_buffer)
@@ -359,13 +404,15 @@ class A2C_Agent():
                 # save model parameters
                 if episode_count_global % interval_ckpt == 0 and train == True:
                     saver.save(sess,self.model_path+'/'+str(episode_count_global)+'.ckpt')
-                    print("Saved model parameters                                        ")
+                    print('Saved model parameters at global episode ' + str(episode_count_global) + '                 ')
 
                 # save gif image of fast learning
                 if episode_count_global % interval_pic == 0:
-                    self.images = np.array(episode_frames)
-                    make_gif(self.images,pics_path+'/'+str(episode_count_global)+'.gif',
-                        duration=len(self.images)*0.1,true_image=True)
+                    self.env.make_gif(episode_buffer,pics_path,episode_count_global)
+
+                    #self.images = np.array(self.images)
+                    #make_gif(self.images,pics_path+'/'+str(episode_count_global)+'.gif',
+                    #    duration=len(self.images)*0.1,true_image=True)
 
                 episode_count_local += 1        # add to local counter in all agents
 
@@ -374,23 +421,25 @@ class A2C_Agent():
 # MAIN CODE #
 #############
 
+param=Parameters(param_set)
+
 tf.reset_default_graph()
 
 # Setup agents for multiple threading
 with tf.device(xpu):
     global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of total episodes defined outside A2C_Agent class
-    if optimizer == "Adam":
-        trainer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-    elif optimizer == "RMSProp":
-        trainer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
+    if param.optimizer == "Adam":
+        trainer = tf.train.AdamOptimizer(learning_rate=param.learning_rate)
+    elif param.optimizer == "RMSProp":
+        trainer = tf.train.RMSPropOptimizer(learning_rate=param.learning_rate)
     
-    master_network = LSTM_RNN_Network(Two_Armed_Bandit(bandit_difficulty).n_actions,'master',None) # Generate master network
+    master_network = LSTM_RNN_Network(Two_Armed_Bandit(param.bandit_difficulty).n_actions,'master',None) # Generate master network
     #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
     
     agents = []
     # Create A2C_Agent classes
-    for i in range(n_agents):
-        agents.append(A2C_Agent(Two_Armed_Bandit(bandit_difficulty),i,trainer,model_path,global_episodes))
+    for i in range(param.n_agents):
+        agents.append(A2C_Agent(Two_Armed_Bandit(param.bandit_difficulty),i,trainer,model_path,global_episodes))
 
     saver = tf.train.Saver(max_to_keep=5)
 
@@ -407,14 +456,14 @@ with tf.Session(config=config) as sess:
         sess.run(tf.global_variables_initializer())
     
     coord = tf.train.Coordinator()
-    if xpu=='/gpu:0' and n_agents==1:
-        agents[0].work(gamma,sess,coord,saver,train)
-    elif xpu=='/gpu:0' and n_agents>1:
+    if xpu=='/gpu:0' and param.n_agents==1:
+        agents[0].work(param.gamma,sess,coord,saver,train)
+    elif xpu=='/gpu:0' and param.n_agents>1:
         raise ValueError('Multi-threading not allowed with GPU')
     else:
         agent_threads = []
         for agent in agents:
-            agent_work = lambda: agent.work(gamma,sess,coord,saver,train)
+            agent_work = lambda: agent.work(param.gamma,sess,coord,saver,train)
             thread = threading.Thread(target=(agent_work))
             thread.start()
             agent_threads.append(thread)
