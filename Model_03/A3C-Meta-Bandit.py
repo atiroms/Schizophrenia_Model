@@ -9,8 +9,8 @@
 # PARAMETERS #
 ##############
 
-#param_set = 'Wang2018'
-param_set = 'awjuliani'
+param_set = 'Wang2018'
+#param_set = 'awjuliani'
 
 xpu = '/cpu:0'                    # processing device allocation
 #xpu = '/gpu:0'
@@ -38,45 +38,20 @@ import scipy.signal
 import datetime
 import time
 import pandas as pd
+import json
 import moviepy.editor as mpy
 from PIL import Image
 from PIL import ImageDraw 
 from PIL import ImageFont
 from functions.helper import *
 
-##############
-# PARAMETERS #
-##############
-
-class Parameters():
-    def __init__(self,param_set):
-        if param_set == 'Wang2018':
-            self.n_agents = 1                       # number of agents that acts in parallel
-            self.n_cells_lstm = 48                  # number of cells in LSTM-RNN network
-            self.gamma = .9                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
-            self.optimizer = "RMSProp"              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
-            self.learning_rate = 0.0007             # Wang Nat Neurosci 2018
-            self.cost_statevalue_estimate = 0.05    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
-            self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
-            self.bandit_difficulty = 'uniform'      # select "independent" for independent bandit
-        elif param_set == 'awjuliani':
-            self.n_agents = 1
-            self.n_cells_lstm = 48                  # number of cells in LSTM-RNN network
-            self.gamma = .8                         # 0.8 in awjuliani/meta-RL
-            self.optimizer = "Adam"
-            self.learning_rate = 1e-3               # awjuliani/meta-RL
-            self.cost_statevalue_estimate = 0.5
-            self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
-            self.bandit_difficulty = 'uniform'
-        else:
-            raise ValueError('Parameter set name not defined.')
-
 
 ##########################
 # DIRECTORY ORGANIZATION #
 ##########################
 
-saved_data_path="./saved_data/"+"{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
+start_datetime="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
+saved_data_path="./saved_data/"+start_datetime
 model_path=saved_data_path+"/model"
 pics_path=saved_data_path+"/pics"
 summary_path=saved_data_path+"/summary"
@@ -91,6 +66,44 @@ if not os.path.exists(summary_path):
     os.makedirs(summary_path)
 if not os.path.exists(activity_path):
     os.makedirs(activity_path)
+
+
+####################
+# PARAMETERS CLASS #
+####################
+
+class Parameters():
+    def __init__(self,start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic):
+        self.start_datetime=start_datetime
+        self.param_set=param_set
+        self.n_agents = 1                       # number of agents that acts in parallel
+        self.n_cells_lstm = 48                  # number of cells in LSTM-RNN network
+        self.bootstrap_value = 0.0
+        self.xpu=xpu
+        self.train=train
+        self.load_model=load_model
+        self.load_model_path=load_model_path
+        self.interval_ckpt=interval_ckpt
+        self.interval_pic=interval_pic
+        self.bandit_difficulty = 'uniform'      # select "independent" for independent bandit
+        if self.param_set == 'Wang2018':
+            self.gamma = .9                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
+            self.optimizer = "RMSProp"              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
+            self.learning_rate = 0.0007             # Wang Nat Neurosci 2018
+            self.cost_statevalue_estimate = 0.05    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
+            self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
+        elif self.param_set == 'awjuliani':
+            self.gamma = .8                         # 0.8 in awjuliani/meta-RL
+            self.optimizer = "Adam"
+            self.learning_rate = 1e-3               # awjuliani/meta-RL
+            self.cost_statevalue_estimate = 0.5
+            self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
+        else:
+            raise ValueError('Parameter set name not defined.')
+
+param=Parameters(start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
+with open(saved_data_path+'/parameters.json', 'w') as fp:
+    json.dump(param.__dict__, fp, indent=1)
 
 
 ###################################
@@ -269,7 +282,8 @@ class A2C_Agent():
         self.update_local_ops = update_target_graph('master',self.name)        
         
         
-    def train(self,episode_buffer,sess,gamma,bootstrap_value):
+    #def train(self,episode_buffer,sess,gamma,bootstrap_value):
+    def train(self,episode_buffer,sess):
         timesteps = episode_buffer[:,0]
         actions = episode_buffer[:,1]
         rewards = episode_buffer[:,2]
@@ -282,11 +296,11 @@ class A2C_Agent():
         # Here we take the rewards and values from the episode_buffer, and use them to 
         # generate the advantage and discounted returns. 
         # The advantage function uses "Generalized Advantage Estimation"
-        self.rewards_plus = np.asarray(rewards.tolist() + [bootstrap_value])
-        discounted_rewards = discount(self.rewards_plus,gamma)[:-1]
-        self.value_plus = np.asarray(values.tolist() + [bootstrap_value])
-        advantages = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
-        advantages = discount(advantages,gamma)
+        self.rewards_plus = np.asarray(rewards.tolist() + [self.param.bootstrap_value])
+        discounted_rewards = discount(self.rewards_plus,self.param.gamma)[:-1]
+        self.value_plus = np.asarray(values.tolist() + [self.param.bootstrap_value])
+        advantages = rewards + self.param.gamma * self.value_plus[1:] - self.value_plus[:-1]
+        advantages = discount(advantages,self.param.gamma)
 
         # Update the master network using gradients from loss
         # Generate network statistics to periodically save
@@ -316,7 +330,9 @@ class A2C_Agent():
 
         return t_l, v_l, p_l, e_l, g_n, v_n
         
-    def work(self,gamma,sess,coord,saver,train):
+    #def work(self,gamma,sess,coord,saver,train,interval_ckpt,interval_pic):
+    def work(self,param,sess,coord,saver):
+        self.param=param
         episode_count_global = sess.run(self.global_episodes)           # refer to global episode counter over all agents
         episode_count_local = 0
         agent_steps = 0
@@ -368,8 +384,8 @@ class A2C_Agent():
                 
                 # train the network using the experience buffer at the end of the episode.
                 #if len(episode_buffer) != 0 and train == True:
-                if train == True:
-                    t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,bootstrap_value=0.0)
+                if self.param.train == True:
+                    t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess)
 
                 # Save activity in /activity/activity.h5 file
                 df_episode = pd.DataFrame(episode_buffer)
@@ -392,7 +408,7 @@ class A2C_Agent():
                 summary_episode.value.add(tag="Environment/Step Length", simple_value=int(episode_steps))
                 summary_episode.value.add(tag="Environment/Arm0 Probability", simple_value=float(bandit[0]))
                 summary_episode.value.add(tag="Environment/Arm1 Probability", simple_value=float(bandit[1]))
-                if train == True:
+                if self.param.train == True:
                     summary_episode.value.add(tag="Loss/Total Loss", simple_value=float(t_l))
                     summary_episode.value.add(tag="Loss/Value Loss", simple_value=float(v_l))
                     summary_episode.value.add(tag="Loss/Policy Loss", simple_value=float(p_l))
@@ -403,12 +419,12 @@ class A2C_Agent():
                 self.summary_writer.flush()
                     
                 # save model parameters
-                if episode_count_global % interval_ckpt == 0 and train == True:
+                if episode_count_global % self.param.interval_ckpt == 0 and self.param.train == True:
                     saver.save(sess,self.model_path+'/'+str(episode_count_global)+'.ckpt')
                     print('Saved model parameters at global episode ' + str(episode_count_global) + '                 ')
 
                 # save gif image of fast learning
-                if episode_count_global % interval_pic == 0:
+                if episode_count_global % self.param.interval_pic == 0:
                     self.env.make_gif(episode_buffer,pics_path,episode_count_global)
 
                     #self.images = np.array(self.images)
@@ -422,12 +438,10 @@ class A2C_Agent():
 # MAIN CODE #
 #############
 
-param=Parameters(param_set)
-
 tf.reset_default_graph()
 
 # Setup agents for multiple threading
-with tf.device(xpu):
+with tf.device(param.xpu):
     global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of total episodes defined outside A2C_Agent class
     if param.optimizer == "Adam":
         trainer = tf.train.AdamOptimizer(learning_rate=param.learning_rate)
@@ -449,22 +463,24 @@ with tf.device(xpu):
 config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
 with tf.Session(config=config) as sess:
     
-    if load_model == True:
+    if param.load_model == True:
         print('Loading Model...')
-        ckpt = tf.train.get_checkpoint_state(load_model_path)
+        ckpt = tf.train.get_checkpoint_state(param.load_model_path)
         saver.restore(sess,ckpt.model_checkpoint_path)
     else:
         sess.run(tf.global_variables_initializer())
     
     coord = tf.train.Coordinator()
-    if xpu=='/gpu:0' and param.n_agents==1:
-        agents[0].work(param.gamma,sess,coord,saver,train)
-    elif xpu=='/gpu:0' and param.n_agents>1:
+    if param.xpu=='/gpu:0' and param.n_agents==1:
+        agents[0].work(param,sess,coord,saver)
+        #agents[0].work(param.gamma,sess,coord,saver,param.train,param.interval_ckpt,param.interval_pic)
+    elif param.xpu=='/gpu:0' and param.n_agents>1:
         raise ValueError('Multi-threading not allowed with GPU')
     else:
         agent_threads = []
         for agent in agents:
-            agent_work = lambda: agent.work(param.gamma,sess,coord,saver,train)
+            agent_work = lambda: agent.work(param,sess,coord,saver)
+            #agent_work = lambda: agent.work(param.gamma,sess,coord,saver,param.train,param.interval_ckpt,param.interval_pic)
             thread = threading.Thread(target=(agent_work))
             thread.start()
             agent_threads.append(thread)

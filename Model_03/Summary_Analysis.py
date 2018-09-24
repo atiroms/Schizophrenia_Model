@@ -12,8 +12,8 @@
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180914_000352/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180918_211807/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180921_011111/summary'
-data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180923_114142/summary'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180923_114142/summary'
+data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630/summary'
 
 
 #############
