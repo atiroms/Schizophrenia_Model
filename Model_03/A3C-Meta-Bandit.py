@@ -75,7 +75,25 @@ if not os.path.exists(activity_path):
 ####################
 
 class Parameters():
-    def __init__(self,start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic):
+    def __init__(self,start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic): 
+        if self.param_set == 'Wang2018':
+            self.default(start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
+        elif self.param_set == 'awjuliani':
+            self.default(start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
+            self.gamma = .8                         # 0.8 in awjuliani/meta-RL
+            self.optimizer = "Adam"
+            self.learning_rate = 1e-3               # awjuliani/meta-RL
+            self.cost_statevalue_estimate = 0.5
+        elif self.param_set == 'Wang2018_fast':     # 10 times larger learning rate
+            self.default(start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
+            self.learning_rate = 0.007              # Wang Nat Neurosci 2018
+        if self.param_set == 'Wang2018_statevalue':
+            self.default(start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
+            self.cost_statevalue_estimate = 0.5     # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
+        else:
+            raise ValueError('Undefined parameter set name.')
+        
+    def default(self,start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic):
         self.start_datetime=start_datetime
         self.param_set=param_set
         self.n_agents = 1                       # number of agents that acts in parallel
@@ -88,32 +106,13 @@ class Parameters():
         self.interval_ckpt=interval_ckpt
         self.interval_pic=interval_pic
         self.bandit_difficulty = 'uniform'      # select "independent" for independent bandit
-        if self.param_set == 'Wang2018':
-            self.gamma = .9                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
-            self.optimizer = "RMSProp"              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
-            self.learning_rate = 0.0007             # Wang Nat Neurosci 2018
-            self.cost_statevalue_estimate = 0.05    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
-            self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
-        elif self.param_set == 'awjuliani':
-            self.gamma = .8                         # 0.8 in awjuliani/meta-RL
-            self.optimizer = "Adam"
-            self.learning_rate = 1e-3               # awjuliani/meta-RL
-            self.cost_statevalue_estimate = 0.5
-            self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
-        elif self.param_set == 'Wang2018_fast':     # 10 times larger learning rate
-            self.gamma = .9                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
-            self.optimizer = "RMSProp"              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
-            self.learning_rate = 0.007             # Wang Nat Neurosci 2018
-            self.cost_statevalue_estimate = 0.05    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
-            self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
-        if self.param_set == 'Wang2018_statevalue':
-            self.gamma = .9                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
-            self.optimizer = "RMSProp"              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
-            self.learning_rate = 0.0007             # Wang Nat Neurosci 2018
-            self.cost_statevalue_estimate = 0.5    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
-            self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
-        else:
-            raise ValueError('Parameter set name not defined.')
+        # Wang 2018 parameters
+        self.gamma = .9                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
+        self.optimizer = "RMSProp"              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
+        self.learning_rate = 0.0007             # Wang Nat Neurosci 2018
+        self.cost_statevalue_estimate = 0.05    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
+        self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
+
 
 param=Parameters(start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
 with open(saved_data_path+'/parameters.json', 'w') as fp:
