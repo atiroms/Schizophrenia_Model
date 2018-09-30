@@ -80,7 +80,7 @@ class Parameters():
         if self.param_set == 'Wang2018':
             self.default(start_datetime,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
         elif self.param_set == 'awjuliani':
-            self.default(start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
+            self.default(start_datetime,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
             self.gamma = .8                         # 0.8 in awjuliani/meta-RL
             self.optimizer = "Adam"
             self.learning_rate = 1e-3               # awjuliani/meta-RL
