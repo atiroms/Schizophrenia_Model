@@ -24,5 +24,5 @@ import pandas as pd
 ################
 
 hdf = pd.HDFStore(data_path)
-df = pd.DataFrame(df['activity'])
+df = pd.DataFrame(hdf['activity'])
 hdf.close()

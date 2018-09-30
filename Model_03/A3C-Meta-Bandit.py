@@ -9,8 +9,10 @@
 # PARAMETERS #
 ##############
 
-param_set = 'Wang2018'
+#param_set = 'Wang2018'
 #param_set = 'awjuliani'
+#param_set = 'Wang2018_fast'
+param_set = 'Wang2018_statevalue'
 
 xpu = '/cpu:0'                    # processing device allocation
 #xpu = '/gpu:0'
@@ -97,6 +99,18 @@ class Parameters():
             self.optimizer = "Adam"
             self.learning_rate = 1e-3               # awjuliani/meta-RL
             self.cost_statevalue_estimate = 0.5
+            self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
+        elif self.param_set == 'Wang2018_fast':     # 10 times larger learning rate
+            self.gamma = .9                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
+            self.optimizer = "RMSProp"              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
+            self.learning_rate = 0.007             # Wang Nat Neurosci 2018
+            self.cost_statevalue_estimate = 0.05    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
+            self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
+        if self.param_set == 'Wang2018_statevalue':
+            self.gamma = .9                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
+            self.optimizer = "RMSProp"              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
+            self.learning_rate = 0.0007             # Wang Nat Neurosci 2018
+            self.cost_statevalue_estimate = 0.5    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
             self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
         else:
             raise ValueError('Parameter set name not defined.')
@@ -486,4 +500,5 @@ with tf.Session(config=config) as sess:
             agent_threads.append(thread)
         coord.join(agent_threads)
 
+print('Simulation terminated.')
 # END OF FILE
