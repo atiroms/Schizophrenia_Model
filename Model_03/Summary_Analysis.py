@@ -18,7 +18,9 @@
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_235841/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180926_002716/summary'
-data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary'
+
+data_path = 'C:/Users/atiro/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary'
 
 
 #############
@@ -33,66 +35,105 @@ import plotly as py
 import cufflinks as cf
 import glob
 import os
-
-
-###################
-# DATA EXTRACTION #
-###################
-
-data_paths = glob.glob(os.path.join(data_path, "*", "event*"))
-
-for p in data_paths:
-    count=0
-    for e in tf.train.summary_iterator(p):
-        print("Extracting episode " + str(int(e.step)), end="\r")
-        if count==1:
-        #if count==0:
-            colnames=['Simulation/Global Episode Count']+[v.tag for v in e.summary.value]
-            df=pd.DataFrame(columns=colnames)
-        
-        if count>0:
-        #if count>-1:
-            data=[e.step]+[v.simple_value for v in e.summary.value]
-            df.loc[count]=data
-        count+=1
+import math
 
 
 ##############################
-# DATA SAVING IN HDF5 FORMAT #
+# DATA EXTRACTION AND SAVING #
 ##############################
 
-# '/' cannot be used as column names when stored in hdf5, so column names are stored separately
-colnames=pd.Series(df.columns.values,index=('col'+str(i) for i in range(df.shape[1])))
-df.columns=list('col'+str(i) for i in range(df.shape[1]))
-hdf=pd.HDFStore(data_path+'/summary.h5')
-hdf.put('summary',df,format='table',append=False,data_columns=True)
-hdf.put('colnames',colnames)
-hdf.close()
+class Extract():
+    def __init__(self,data_path):
+        # Collect summary files
+        self.data_path=data_path
+        self.data_paths = glob.glob(os.path.join(self.data_path, '*', 'event*'))
+
+        # Extract data from summary files
+        print('Extracting data.')
+        for p in self.data_paths:
+            count=0
+            for e in tf.train.summary_iterator(p):
+                print('Extracting episode ' + str(int(e.step)), end='\r')
+                if count==1:
+                #if count==0:
+                    colnames=['Simulation/Global Episode Count']+[v.tag for v in e.summary.value]
+                    df=pd.DataFrame(columns=colnames)
+
+                if count>0:
+                #if count>-1:
+                    data=[e.step]+[v.simple_value for v in e.summary.value]
+                    df.loc[count]=data
+                count+=1
+        self.data = df
+
+        print('\n')
+        print('Finished data extraction. ' + str(count) + ' timepoints.')
+        print('Saving extracted data.')
+
+        # Save summary files in hdf5 format
+        # '/' cannot be used as column names when stored in hdf5, so column names are stored separately
+        colnames=pd.Series(df.columns.values,index=('col'+str(i) for i in range(df.shape[1])))
+        df.columns=list('col'+str(i) for i in range(df.shape[1]))
+        hdf=pd.HDFStore(self.data_path+'/summary.h5')
+        hdf.put('summary',df,format='table',append=False,data_columns=True)
+        hdf.put('colnames',colnames)
+        hdf.close()
+        print('Finished data saving.')
 
 
 ################
 # DATA LOADING #
 ################
 
-hdf = pd.HDFStore(data_path+'/summary.h5')
-df = pd.DataFrame(hdf['summary'])
-df.columns=hdf['colnames'].tolist()
-hdf.close()
+class Load():
+    def __init__(self,data_path):
+        print('Loading hdf5 file.')
+        self.data_path=data_path
+        hdf = pd.HDFStore(self.data_path+'/summary.h5')
+        df = pd.DataFrame(hdf['summary'])
+        df.columns=hdf['colnames'].tolist()
+        self.data=df
+        hdf.close()
+        print('Finished data loading.')
 
 
 #################
 # VISUALIZATION #
 #################
 
-#cf.set_config_file(offline=True, theme="white", offline_show_link=False)
-#cf.go_offline()
+class Visualize():
+    def __init__(self,dataframe):
+        self.df=dataframe
+        #cf.set_config_file(offline=True, theme="white", offline_show_link=False)
+        #cf.go_offline()
+        #df.plot(x='Simulation/Global Episode Count', y='Performance/Reward')
+        #plt.show()
+        #df.iplot(kind="scatter", mode='markers', x='Simulation/Global Episode Count', y='Performance/Reward')
 
-#df.plot(x='Simulation/Global Episode Count', y='Performance/Reward')
-#plt.show()
+        fig = self.df.iplot(
+            kind="scatter", asFigure=True,x='Simulation/Global Episode Count', y='Performance/Reward',
+            title='Reward - Episode', xTitle='Episode', yTitle='Reward',
+            colors=['blue'])
+        #fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Perf/Reward')
+        py.offline.plot(fig, filename='example_scatter')
 
-#df.iplot(kind="scatter", mode='markers', x='Simulation/Global Episode Count', y='Performance/Reward')
 
+#########################
+# AVERAGE OVER EPISODES #
+#########################
 
-fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Performance/Reward')
-#fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Perf/Reward')
-py.offline.plot(fig, filename='example_scatter')
+class AveEpisode():
+    def __init__(self,dataframe,interval):
+        self.input=dataframe
+        self.interval=interval
+        self.length=math.floor(len(self.input)/self.interval)
+        self.calc_average()
+
+    def calc_average(self):
+        print('Calculating averages over ' + str(self.interval) + ' episodes.')
+        self.output=pd.DataFrame(columns=self.input.columns)
+        for i in range(self.length):
+            self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
+        print('Finished calculating averages.')
+
+print('End of file.')

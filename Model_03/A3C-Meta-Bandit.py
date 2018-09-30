@@ -499,5 +499,4 @@ with tf.Session(config=config) as sess:
             agent_threads.append(thread)
         coord.join(agent_threads)
 
-print('Simulation terminated.')
-# END OF FILE
+print('End of file.')
