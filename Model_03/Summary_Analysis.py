@@ -9,18 +9,26 @@
 # PARAMETERS #
 ##############
 
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180914_000352/summary'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180918_211807/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180914_000352/summary'   # summary saved every 50 episodes
+data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180918_211807/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180921_011111/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180923_114142/summary'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630/summary'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_235841/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180926_002716/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary'
 
-data_path = 'C:/Users/atiro/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary'
+#data_path = 'C:/Users/atiro/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary'
+
+data_paths=[
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180918_211807/summary',
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180921_011111/summary',
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180923_114142/summary',
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630/summary',
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_235841/summary',
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180926_002716/summary',
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary',
+]
 
 
 #############
@@ -86,13 +94,13 @@ class Extract():
 ################
 
 class Load():
-    def __init__(self,data_path):
+    def __init__(self,data_path=data_path):
         print('Loading hdf5 file.')
         self.data_path=data_path
         hdf = pd.HDFStore(self.data_path+'/summary.h5')
         df = pd.DataFrame(hdf['summary'])
         df.columns=hdf['colnames'].tolist()
-        self.data=df
+        self.output=df
         hdf.close()
         print('Finished data loading.')
 
@@ -102,8 +110,10 @@ class Load():
 #################
 
 class Visualize():
-    def __init__(self,dataframe):
+    def __init__(self,dataframe,data_path=data_path,key='Performance/Reward'):
         self.df=dataframe
+        self.data_path=data_path
+        self.key=key
         #cf.set_config_file(offline=True, theme="white", offline_show_link=False)
         #cf.go_offline()
         #df.plot(x='Simulation/Global Episode Count', y='Performance/Reward')
@@ -115,7 +125,7 @@ class Visualize():
             title='Reward - Episode', xTitle='Episode', yTitle='Reward',
             colors=['blue'])
         #fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Perf/Reward')
-        py.offline.plot(fig, filename='example_scatter')
+        py.offline.plot(fig, filename=self.data_path + '/Reward.html')
 
 
 #########################
@@ -135,5 +145,18 @@ class AveEpisode():
         for i in range(self.length):
             self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
         print('Finished calculating averages.')
+
+
+##############################
+# REWARD AVERAGE GRAPH BATCH #
+##############################
+
+class RewardAverageGraphBatch():
+    def __init__(self,data_paths=data_paths):
+        for p in data_paths:
+            df=Load(data_path=p).output
+            ave=AveEpisode(dataframe=df,interval=100).output
+            vis=Visualize(dataframe=ave,data_path=p)
+
 
 print('End of file.')
