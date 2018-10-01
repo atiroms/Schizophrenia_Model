@@ -10,13 +10,14 @@
 ##############
 
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180914_000352/summary'   # summary saved every 50 episodes
-data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180918_211807/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180918_211807/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180921_011111/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180923_114142/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_235841/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180926_002716/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary'
+data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180929_001701/summary'
 
 #data_path = 'C:/Users/atiro/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary'
 
@@ -51,13 +52,13 @@ import math
 ##############################
 
 class Extract():
-    def __init__(self,data_path):
+    def __init__(self,data_path=data_path):
         # Collect summary files
         self.data_path=data_path
         self.data_paths = glob.glob(os.path.join(self.data_path, '*', 'event*'))
 
         # Extract data from summary files
-        print('Extracting data.')
+        print('Starting data extraction.')
         for p in self.data_paths:
             count=0
             for e in tf.train.summary_iterator(p):
@@ -65,14 +66,13 @@ class Extract():
                 if count==1:
                 #if count==0:
                     colnames=['Simulation/Global Episode Count']+[v.tag for v in e.summary.value]
-                    df=pd.DataFrame(columns=colnames)
+                    self.output=pd.DataFrame(columns=colnames)
 
                 if count>0:
                 #if count>-1:
                     data=[e.step]+[v.simple_value for v in e.summary.value]
-                    df.loc[count]=data
+                    self.output.loc[count]=data
                 count+=1
-        self.data = df
 
         print('\n')
         print('Finished data extraction. ' + str(count) + ' timepoints.')
@@ -80,13 +80,14 @@ class Extract():
 
         # Save summary files in hdf5 format
         # '/' cannot be used as column names when stored in hdf5, so column names are stored separately
-        colnames=pd.Series(df.columns.values,index=('col'+str(i) for i in range(df.shape[1])))
-        df.columns=list('col'+str(i) for i in range(df.shape[1]))
+        colnames=pd.Series(self.output.columns.values,index=('col'+str(i) for i in range(self.output.shape[1])))
+        self.output.columns=list('col'+str(i) for i in range(self.output.shape[1]))
         hdf=pd.HDFStore(self.data_path+'/summary.h5')
-        hdf.put('summary',df,format='table',append=False,data_columns=True)
+        hdf.put('summary',self.output,format='table',append=False,data_columns=True)
         hdf.put('colnames',colnames)
         hdf.close()
-        print('Finished data saving.')
+        self.output.columns=colnames.tolist()
+        print('Finished saving data.')
 
 
 ################
@@ -95,14 +96,13 @@ class Extract():
 
 class Load():
     def __init__(self,data_path=data_path):
-        print('Loading hdf5 file.')
+        print('Starting hdf5 file loading.')
         self.data_path=data_path
         hdf = pd.HDFStore(self.data_path+'/summary.h5')
-        df = pd.DataFrame(hdf['summary'])
-        df.columns=hdf['colnames'].tolist()
-        self.output=df
+        self.output = pd.DataFrame(hdf['summary'])
+        self.output.columns=hdf['colnames'].tolist()
         hdf.close()
-        print('Finished data loading.')
+        print('Finished hdf5 file loading.')
 
 
 #################
@@ -126,6 +126,7 @@ class Visualize():
             colors=['blue'])
         #fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Perf/Reward')
         py.offline.plot(fig, filename=self.data_path + '/Reward.html')
+        print('Generated graph.')
 
 
 #########################
@@ -140,6 +141,7 @@ class AveEpisode():
         self.calc_average()
 
     def calc_average(self):
+        print('Starting calculation of averages.')
         print('Calculating averages over ' + str(self.interval) + ' episodes.')
         self.output=pd.DataFrame(columns=self.input.columns)
         for i in range(self.length):
@@ -154,9 +156,11 @@ class AveEpisode():
 class RewardAverageGraphBatch():
     def __init__(self,data_paths=data_paths):
         for p in data_paths:
+            print('Calculating ' + p + '.')
             df=Load(data_path=p).output
             ave=AveEpisode(dataframe=df,interval=100).output
             vis=Visualize(dataframe=ave,data_path=p)
+        print('Finished batch calculation.')
 
 
 print('End of file.')
