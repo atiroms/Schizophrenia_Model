@@ -9,10 +9,10 @@
 # PARAMETERS #
 ##############
 
-#param_set = 'Wang2018'
+param_set = 'Wang2018'
 #param_set = 'awjuliani'
 #param_set = 'Wang2018_fast'
-param_set = 'Wang2018_statevalue'
+#param_set = 'Wang2018_statevalue'
 
 xpu = '/cpu:0'                    # processing device allocation
 #xpu = '/gpu:0'
@@ -75,27 +75,27 @@ if not os.path.exists(activity_path):
 ####################
 
 class Parameters():
-    def __init__(self,start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic): 
+    def __init__(self,start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic):
+        self.param_set=param_set 
         if self.param_set == 'Wang2018':
-            self.default(start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
+            self.default(start_datetime,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
         elif self.param_set == 'awjuliani':
-            self.default(start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
+            self.default(start_datetime,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
             self.gamma = .8                         # 0.8 in awjuliani/meta-RL
             self.optimizer = "Adam"
             self.learning_rate = 1e-3               # awjuliani/meta-RL
             self.cost_statevalue_estimate = 0.5
         elif self.param_set == 'Wang2018_fast':     # 10 times larger learning rate
-            self.default(start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
+            self.default(start_datetime,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
             self.learning_rate = 0.007              # Wang Nat Neurosci 2018
         if self.param_set == 'Wang2018_statevalue':
-            self.default(start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
+            self.default(start_datetime,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic)
             self.cost_statevalue_estimate = 0.5     # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
         else:
             raise ValueError('Undefined parameter set name.')
         
-    def default(self,start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic):
+    def default(self,start_datetime,xpu,train,load_model,load_model_path,interval_ckpt,interval_pic):
         self.start_datetime=start_datetime
-        self.param_set=param_set
         self.n_agents = 1                       # number of agents that acts in parallel
         self.n_cells_lstm = 48                  # number of cells in LSTM-RNN network
         self.bootstrap_value = 0.0
