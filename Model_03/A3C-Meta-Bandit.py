@@ -473,7 +473,8 @@ with tf.device(param.xpu):
 
 
 # Run agents
-config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
+#config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
+config=tf.ConfigProto(allow_soft_placement=True)
 with tf.Session(config=config) as sess:
     
     if param.load_model == True:
