@@ -9,10 +9,10 @@
 # PARAMETERS #
 ##############
 
-#param_set = 'Wang2018'
+param_set = 'Wang2018'
 #param_set = 'awjuliani'
 #param_set = 'Wang2018_fast'
-param_set = 'Wang2018_statevalue'
+#param_set = 'Wang2018_statevalue'
 
 xpu = '/cpu:0'                    # processing device allocation
 #xpu = '/gpu:0'
