@@ -35,6 +35,12 @@ param_basic={
     'interval_var': 10
 }
 
+param_batch={
+    '1':{'param':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
+    '2':{'param':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']},
+    '3':{'param':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
+}
+
 
 #############
 # LIBRARIES #
@@ -510,6 +516,20 @@ class Run():
                     thread.start()
                     agent_threads.append(thread)
                 coord.join(agent_threads)
+
+
+#############
+# BATCH RUN #
+#############
+
+class BatchRun():
+    def __init__(self,param_batch=param_batch):
+        n_param=len(param_batch)
+        for param in param_batch.values():
+            param['param']
+            param['min']
+            param['max']
+            param
 
 
 print('End of file.')
