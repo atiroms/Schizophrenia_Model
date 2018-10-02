@@ -568,5 +568,12 @@ class BatchRun():
 
             batch_count += 1
 
+    def run():
+        for i in range(self.batch_table_length):
+            run = Run(basic_param)
+            param_dict={}
+            for j in range(self.n_param):
+                param_dict[self.batch_table.columns[j]]=self.batch_table.iloc[i,j]
+            
 
 print('End of file.')
