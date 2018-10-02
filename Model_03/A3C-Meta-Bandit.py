@@ -470,53 +470,60 @@ class A2C_Agent():
 # MAIN CODE #
 #############
 
-tf.reset_default_graph()
 
-# Setup agents for multiple threading
-with tf.device(param.xpu):
-    global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of total episodes defined outside A2C_Agent class
-    if param.optimizer == "Adam":
-        trainer = tf.train.AdamOptimizer(learning_rate=param.learning_rate)
-    elif param.optimizer == "RMSProp":
-        trainer = tf.train.RMSPropOptimizer(learning_rate=param.learning_rate)
-    
-    master_network = LSTM_RNN_Network(Two_Armed_Bandit(param.bandit_difficulty).n_actions,'master',None) # Generate master network
-    #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
-    
-    agents = []
-    # Create A2C_Agent classes
-    for i in range(param.n_agents):
-        agents.append(A2C_Agent(Two_Armed_Bandit(param.bandit_difficulty),i,trainer,global_episodes))
+class Run():
+    def __init__(self,param=param):
+        self.param=param
+        self.set_agent()
+        self.run()
 
-    saver = tf.train.Saver(max_to_keep=5)
+    def set_agent(self):
+        tf.reset_default_graph()
+        # Setup agents for multiple threading
+        with tf.device(self.param.xpu):
+            self.global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of total episodes defined outside A2C_Agent class
+            if self.param.optimizer == "Adam":
+                self.trainer = tf.train.AdamOptimizer(learning_rate=self.param.learning_rate)
+            elif self.param.optimizer == "RMSProp":
+                self.trainer = tf.train.RMSPropOptimizer(learning_rate=self.param.learning_rate)
 
+            self.master_network = LSTM_RNN_Network(Two_Armed_Bandit(self.param.bandit_difficulty).n_actions,'master',None) # Generate master network
+            #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
 
-# Run agents
-#config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
-config=tf.ConfigProto(allow_soft_placement=True)
-with tf.Session(config=config) as sess:
-    
-    if param.load_model == True:
-        print('Loading Model...')
-        ckpt = tf.train.get_checkpoint_state(param.load_model_path)
-        saver.restore(sess,ckpt.model_checkpoint_path)
-    else:
-        sess.run(tf.global_variables_initializer())
-    
-    coord = tf.train.Coordinator()
-    if param.xpu=='/gpu:0' and param.n_agents==1:
-        agents[0].work(param,sess,coord,saver)
-        #agents[0].work(param.gamma,sess,coord,saver,param.train,param.interval_ckpt,param.interval_pic)
-    elif param.xpu=='/gpu:0' and param.n_agents>1:
-        raise ValueError('Multi-threading not allowed with GPU')
-    else:
-        agent_threads = []
-        for agent in agents:
-            agent_work = lambda: agent.work(param,sess,coord,saver)
-            #agent_work = lambda: agent.work(param.gamma,sess,coord,saver,param.train,param.interval_ckpt,param.interval_pic)
-            thread = threading.Thread(target=(agent_work))
-            thread.start()
-            agent_threads.append(thread)
-        coord.join(agent_threads)
+            self.agents = []
+            # Create A2C_Agent classes
+            for i in range(self.param.n_agents):
+                self.agents.append(A2C_Agent(Two_Armed_Bandit(self.param.bandit_difficulty),i,self.trainer,self.global_episodes))
+
+            self.saver = tf.train.Saver(max_to_keep=5)
+
+    def run(self):
+        # Run agents
+        #config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
+        config=tf.ConfigProto(allow_soft_placement=True)
+        with tf.Session(config=config) as sess:
+
+            if self.param.load_model == True:
+                print('Loading Model...')
+                ckpt = tf.train.get_checkpoint_state(self.param.load_model_path)
+                self.saver.restore(sess,ckpt.model_checkpoint_path)
+            else:
+                sess.run(tf.global_variables_initializer())
+
+            coord = tf.train.Coordinator()
+            if self.param.xpu=='/gpu:0' and self.param.n_agents==1:
+                self.agents[0].work(self.param,sess,coord,self.saver)
+                #agents[0].work(param.gamma,sess,coord,saver,param.train,param.interval_ckpt,param.interval_pic)
+            elif self.param.xpu=='/gpu:0' and self.param.n_agents>1:
+                raise ValueError('Multi-threading not allowed with GPU')
+            else:
+                agent_threads = []
+                for agent in self.agents:
+                    agent_work = lambda: agent.work(self.param,sess,coord,self.saver)
+                    #agent_work = lambda: agent.work(param.gamma,sess,coord,saver,param.train,param.interval_ckpt,param.interval_pic)
+                    thread = threading.Thread(target=(agent_work))
+                    thread.start()
+                    agent_threads.append(thread)
+                coord.join(agent_threads)
 
 print('End of file.')
