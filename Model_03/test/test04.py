@@ -25,3 +25,22 @@ c.shape
 e=np.concatenate((f,c))
 e
 
+a.b=0
+a=1
+a.b=1
+a=None
+a
+
+a.b=1
+
+
+for i in [1,2,3]:
+    print(i)
+
+
+a='test'
+
+b={
+    a+'1':2
+}
+

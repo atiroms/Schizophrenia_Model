@@ -9,22 +9,28 @@
 # PARAMETERS #
 ##############
 
-param_set = 'Wang2018'
-#param_set = 'awjuliani'
-#param_set = 'Wang2018_fast'
-#param_set = 'Wang2018_statevalue'
+param_basic={
+    'param_set': 'Wang2018',
+    #'param_set' : 'awjuliani',
+    #'param_set' : 'Wang2018_fast',
+    #'param_set' : 'Wang2018_statevalue',
 
-xpu = '/cpu:0'                    # processing device allocation
-#xpu = '/gpu:0'
+    'xpu' : '/cpu:0',                    # processing device allocation
+    #'xpu' : '/gpu:0',
 
-train = True
-load_model = False
-load_model_path = './saved_data/20180917_011631'
+    'train' : True,
+    'load_model' : False,
+    'path_model_load' : './saved_data/20180917_011631',
 
-interval_ckpt = 1000
-#interval_pic = 100
-interval_pic = 0
-interval_var = 10
+    'n_agents' : 1,                       # number of agents that acts in parallel
+
+    'environment' : 'Two_Armed_Bandit',
+
+    'interval_ckpt': 1000,
+    #'interval_pic': 100,
+    'interval_pic': 0,
+    'interval_var': 10
+}
 
 
 #############
@@ -48,78 +54,6 @@ from PIL import Image
 from PIL import ImageDraw 
 from PIL import ImageFont
 from functions.helper import *
-
-
-##########################
-# DIRECTORY ORGANIZATION #
-##########################
-
-start_datetime="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
-saved_data_path="./saved_data/"+start_datetime
-model_path=saved_data_path+"/model"
-pics_path=saved_data_path+"/pics"
-summary_path=saved_data_path+"/summary"
-activity_path=saved_data_path+"/activity"
-if not os.path.exists(saved_data_path):
-    os.makedirs(saved_data_path)
-if not os.path.exists(model_path):
-    os.makedirs(model_path)
-if not os.path.exists(pics_path):
-    os.makedirs(pics_path)
-if not os.path.exists(summary_path):
-    os.makedirs(summary_path)
-if not os.path.exists(activity_path):
-    os.makedirs(activity_path)
-
-
-####################
-# PARAMETERS CLASS #
-####################
-
-class Parameters():
-    def __init__(self,start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_var,interval_pic):
-        self.param_set=param_set
-        if self.param_set == 'Wang2018':
-            self.default(start_datetime,xpu,train,load_model,load_model_path,interval_ckpt,interval_var,interval_pic)
-        elif self.param_set == 'awjuliani':
-            self.default(start_datetime,xpu,train,load_model,load_model_path,interval_ckpt,interval_var,interval_pic)
-            self.gamma = .8                         # 0.8 in awjuliani/meta-RL
-            self.optimizer = "Adam"
-            self.learning_rate = 1e-3               # awjuliani/meta-RL
-            self.cost_statevalue_estimate = 0.5
-        elif self.param_set == 'Wang2018_fast':     # 10 times larger learning rate
-            self.default(start_datetime,xpu,train,load_model,load_model_path,interval_ckpt,interval_var,interval_pic)
-            self.learning_rate = 0.007              # Wang Nat Neurosci 2018
-        elif self.param_set == 'Wang2018_statevalue':
-            self.default(start_datetime,xpu,train,load_model,load_model_path,interval_ckpt,interval_var,interval_pic)
-            self.cost_statevalue_estimate = 0.5     # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
-        else:
-            raise ValueError('Undefined parameter set name: ' + self.param_set + '.')
-        
-    def default(self,start_datetime,xpu,train,load_model,load_model_path,interval_ckpt,interval_var,interval_pic):
-        self.start_datetime=start_datetime
-        self.n_agents = 1                       # number of agents that acts in parallel
-        self.n_cells_lstm = 48                  # number of cells in LSTM-RNN network
-        self.bootstrap_value = 0.0
-        self.xpu=xpu
-        self.train=train
-        self.load_model=load_model
-        self.load_model_path=load_model_path
-        self.interval_ckpt=interval_ckpt
-        self.interval_var=interval_var
-        self.interval_pic=interval_pic
-        self.bandit_difficulty = 'uniform'      # select "independent" for independent bandit
-        # Wang 2018 parameters
-        self.gamma = .9                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
-        self.optimizer = "RMSProp"              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
-        self.learning_rate = 0.0007             # Wang Nat Neurosci 2018
-        self.cost_statevalue_estimate = 0.05    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
-        self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
-
-
-param=Parameters(start_datetime,param_set,xpu,train,load_model,load_model_path,interval_ckpt,interval_var,interval_pic)
-with open(saved_data_path+'/parameters.json', 'w') as fp:
-    json.dump(param.__dict__, fp, indent=1)
 
 
 ###################################
@@ -205,7 +139,8 @@ class Two_Armed_Bandit():
 ####################
 
 class LSTM_RNN_Network():
-    def __init__(self,n_actions,scope,trainer):
+    def __init__(self,param,n_actions,scope,trainer):
+        self.param=param
         with tf.variable_scope(scope):
             #Input and visual encoding layers
             self.prev_rewards = tf.placeholder(shape=[None,1],dtype=tf.float32)
@@ -216,7 +151,7 @@ class LSTM_RNN_Network():
             hidden = tf.concat([self.prev_rewards,self.prev_actions_onehot,self.timestep],1)
             
             #Recurrent network for temporal dependencies
-            lstm_cell = tf.contrib.rnn.BasicLSTMCell(param.n_cells_lstm,state_is_tuple=True, name='LSTM_Cells')
+            lstm_cell = tf.contrib.rnn.BasicLSTMCell(self.param.n_cells_lstm,state_is_tuple=True, name='LSTM_Cells')
             c_init = np.zeros((1, lstm_cell.state_size.c), np.float32)
             h_init = np.zeros((1, lstm_cell.state_size.h), np.float32)
             self.state_init = [c_init, h_init]
@@ -231,7 +166,7 @@ class LSTM_RNN_Network():
                 time_major=False)
             lstm_c, lstm_h = lstm_state
             self.state_out = (lstm_c[:1, :], lstm_h[:1, :])
-            rnn_out = tf.reshape(lstm_outputs, [-1, param.n_cells_lstm])
+            rnn_out = tf.reshape(lstm_outputs, [-1, self.param.n_cells_lstm])
             
             self.actions = tf.placeholder(shape=[None],dtype=tf.int32)
             self.actions_onehot = tf.one_hot(self.actions,n_actions,dtype=tf.float32)
@@ -261,7 +196,7 @@ class LSTM_RNN_Network():
                 # advantage as a variable. this expression is equivalent to Wang 2018 method
                 self.value_loss = 0.5 * tf.reduce_sum(tf.square(self.target_v - tf.reshape(self.value,[-1])))
                 self.entropy = - tf.reduce_sum(self.policy * tf.log(self.policy + 1e-10))
-                self.loss = self.policy_loss + param.cost_statevalue_estimate * self.value_loss - param.cost_entropy * self.entropy
+                self.loss = self.policy_loss + self.param.cost_statevalue_estimate * self.value_loss - self.param.cost_entropy * self.entropy
 
                 #Get gradients from local network using local losses
                 local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
@@ -279,22 +214,23 @@ class LSTM_RNN_Network():
 #############
 
 class A2C_Agent():
-    def __init__(self,environment,id,trainer,global_episodes):
-        self.env = environment
-        self.n_actions=self.env.n_actions
+    def __init__(self,id,param,environment,trainer,saver,global_episodes):
         self.id = id
         self.name = "agent_" + str(id)
-
+        self.param=param
+        self.env = environment
+        self.n_actions=self.env.n_actions
         self.trainer = trainer
+        self.saver=saver
         self.global_episodes = global_episodes
         self.increment = self.global_episodes.assign_add(1)
         #self.episode_rewards = []
         #self.episode_lengths = []
         #self.episode_mean_values = []
-        self.summary_writer = tf.summary.FileWriter(summary_path+"/"+self.name)   # store summaries for each agent
+        self.summary_writer = tf.summary.FileWriter(self.param.path_summary+"/"+self.name)   # store summaries for each agent
 
         # Create the local copy of the network and the tensorflow op to copy master paramters to local network
-        self.local_AC = LSTM_RNN_Network(self.n_actions,self.name,trainer)
+        self.local_AC = LSTM_RNN_Network(self.param,self.n_actions,self.name,trainer)
         self.update_local_ops = update_target_graph('master',self.name)        
         
         
@@ -347,8 +283,7 @@ class A2C_Agent():
         return t_l, v_l, p_l, e_l, g_n, v_n
         
     #def work(self,gamma,sess,coord,saver,train,interval_ckpt,interval_pic):
-    def work(self,param,sess,coord,saver):
-        self.param=param
+    def work(self,sess,coord):
         episode_count_global = sess.run(self.global_episodes)           # refer to global episode counter over all agents
         episode_count_local = 0
         agent_steps = 0
@@ -412,9 +347,38 @@ class A2C_Agent():
                 df_episode.insert(loc=0, column='episode_count', value=episode_count_global)
                 df_episode.ix[:,['episode_count','agent','timestep','action']]=df_episode.ix[:,['episode_count','agent','timestep','action']].astype('int64')
 
-                hdf=pd.HDFStore(activity_path+'/activity.h5')
+                hdf=pd.HDFStore(self.param.path_activity+'/activity.h5')
                 hdf.put('activity',df_episode,format='table',append=True,data_columns=True)
                 hdf.close()
+                    
+                # save model parameters as tensorflow saver
+                if self.param.interval_ckpt>0:
+                    if episode_count_global % self.param.interval_ckpt == 0 and self.param.train == True:
+                        self.saver.save(sess,self.param.path_model+'/'+str(episode_count_global)+'.ckpt')
+                        print('Saved model parameters at global episode ' + str(episode_count_global) + '                 ')
+
+                # save model trainable variables in hdf5 format
+                if self.param.interval_var>0:
+                    if episode_count_global % self.param.interval_var == 0 and self.param.train == True:
+                        master_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'master')
+                        val = sess.run(master_vars)                      
+                        all_vars=np.empty(shape=[0,])
+                        for v in val:
+                            all_vars=np.concatenate((all_vars,v.ravel()),axis=0)
+                        all_vars=pd.DataFrame(all_vars,columns=['value'])
+                        all_vars.insert(loc=0, column='variable', value=range(all_vars.shape[0]))
+                        all_vars.insert(loc=0, column='episode_count',value=episode_count_global)
+                        #all_vars=all_vars.reshape((1,-1))
+                        #all_vars=pd.DataFrame(all_vars,columns=('var'+str(i) for i in range(all_vars.shape[1])))
+                        #print(type(all_vars))
+                        hdf=pd.HDFStore(self.param.path_model+'/variable.h5')
+                        hdf.put('variable',all_vars,format='table' ,append=True,data_columns=True)
+                        hdf.close()
+
+                # save gif image of fast learning
+                if self.param.interval_pic>0:
+                    if episode_count_global % self.param.interval_pic == 0:
+                        self.env.make_gif(episode_buffer,self.param.path_pic,episode_count_global)
 
                 # Save episode summary in /summary folder
                 summary_episode = tf.Summary()
@@ -433,51 +397,76 @@ class A2C_Agent():
                     summary_episode.value.add(tag="Loss/Variable L2Norm", simple_value=float(v_n))
                 self.summary_writer.add_summary(summary_episode, episode_count_global)
                 self.summary_writer.flush()
-                    
-                # save model parameters as tensorflow saver
-                if self.param.interval_ckpt>0:
-                    if episode_count_global % self.param.interval_ckpt == 0 and self.param.train == True:
-                        saver.save(sess,model_path+'/'+str(episode_count_global)+'.ckpt')
-                        print('Saved model parameters at global episode ' + str(episode_count_global) + '                 ')
-
-                # save model trainable variables in hdf5 format
-                if self.param.interval_var>0:
-                    if episode_count_global % self.param.interval_var == 0 and self.param.train == True:
-                        master_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'master')
-                        val = sess.run(master_vars)                      
-                        all_vars=np.empty(shape=[0,])
-                        for v in val:
-                            all_vars=np.concatenate((all_vars,v.ravel()),axis=0)
-                        all_vars=pd.DataFrame(all_vars,columns=['value'])
-                        all_vars.insert(loc=0, column='variable', value=range(all_vars.shape[0]))
-                        all_vars.insert(loc=0, column='episode_count',value=episode_count_global)
-                        #all_vars=all_vars.reshape((1,-1))
-                        #all_vars=pd.DataFrame(all_vars,columns=('var'+str(i) for i in range(all_vars.shape[1])))
-                        #print(type(all_vars))
-                        hdf=pd.HDFStore(model_path+'/variable.h5')
-                        hdf.put('variable',all_vars,format='table' ,append=True,data_columns=True)
-                        hdf.close()
-
-                # save gif image of fast learning
-                if self.param.interval_pic>0:
-                    if episode_count_global % self.param.interval_pic == 0:
-                        self.env.make_gif(episode_buffer,pics_path,episode_count_global)
 
                 episode_count_local += 1        # add to local counter in all agents
+
+
+####################
+# PARAMETERS CLASS #
+####################
+
+class Parameters():
+    def __init__(self,datetime_start,param_basic,paths):
+        self.datetime_start=datetime_start
+        for p in [param_basic, paths]:
+            for key,value in p.items():
+                setattr(self,key,value)
+        if self.param_set == 'Wang2018':
+            self.default()
+        elif self.param_set == 'awjuliani':
+            self.default()
+            self.gamma = .8                         # 0.8 in awjuliani/meta-RL
+            self.optimizer = 'Adam'
+            self.learning_rate = 1e-3               # awjuliani/meta-RL
+            self.cost_statevalue_estimate = 0.5
+        elif self.param_set == 'Wang2018_fast':     # 10 times larger learning rate
+            self.default()
+            self.learning_rate = 0.007              # Wang Nat Neurosci 2018
+        elif self.param_set == 'Wang2018_statevalue':
+            self.default()
+            self.cost_statevalue_estimate = 0.5     # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
+        else:
+            raise ValueError('Undefined parameter set name: ' + self.param_set + '.')
+        
+    def default(self):
+        self.n_cells_lstm = 48                  # number of cells in LSTM-RNN network
+        self.bootstrap_value = 0.0
+        self.bandit_difficulty = 'uniform'      # select "independent" for independent bandit
+        # Wang 2018 parameters
+        self.gamma = .9                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
+        self.optimizer = 'RMSProp'              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
+        self.learning_rate = 0.0007             # Wang Nat Neurosci 2018
+        self.cost_statevalue_estimate = 0.05    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
+        self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
 
 
 #############
 # MAIN CODE #
 #############
 
-
 class Run():
-    def __init__(self,param=param):
-        self.param=param
-        self.set_agent()
+    def __init__(self,param_basic=param_basic):
+        # Directory organization for saving
+        datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
+        path_save="./saved_data/"+datetime_start
+        paths={
+            'path_save': path_save
+        }
+        for subdir in ['model','pic','summary','activity']:
+            paths['path_'+subdir]=path_save+'/'+subdir
+        for path in paths.values():
+            if not os.path.exists(path):
+                os.makedirs(path)
+
+        # Parameter setting and saving
+        self.param=Parameters(datetime_start,param_basic,paths)
+        with open(path_save+'/parameters.json', 'w') as fp:
+            json.dump(self.param.__dict__, fp, indent=1)
+
+        self.set_agents()
         self.run()
 
-    def set_agent(self):
+    def set_agents(self):
         tf.reset_default_graph()
         # Setup agents for multiple threading
         with tf.device(self.param.xpu):
@@ -486,30 +475,26 @@ class Run():
                 self.trainer = tf.train.AdamOptimizer(learning_rate=self.param.learning_rate)
             elif self.param.optimizer == "RMSProp":
                 self.trainer = tf.train.RMSPropOptimizer(learning_rate=self.param.learning_rate)
-
-            self.master_network = LSTM_RNN_Network(Two_Armed_Bandit(self.param.bandit_difficulty).n_actions,'master',None) # Generate master network
+            self.master_network = LSTM_RNN_Network(self.param,Two_Armed_Bandit(self.param.bandit_difficulty).n_actions,'master',None) # Generate master network
             #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
-
+            self.saver = tf.train.Saver(max_to_keep=5)
             self.agents = []
             # Create A2C_Agent classes
             for i in range(self.param.n_agents):
-                self.agents.append(A2C_Agent(Two_Armed_Bandit(self.param.bandit_difficulty),i,self.trainer,self.global_episodes))
-
-            self.saver = tf.train.Saver(max_to_keep=5)
-
+                self.agents.append(A2C_Agent(i,self.param,Two_Armed_Bandit(self.param.bandit_difficulty),
+                                            self.trainer,self.saver,self.global_episodes))
+            
     def run(self):
         # Run agents
         #config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
         config=tf.ConfigProto(allow_soft_placement=True)
         with tf.Session(config=config) as sess:
-
             if self.param.load_model == True:
                 print('Loading Model...')
-                ckpt = tf.train.get_checkpoint_state(self.param.load_model_path)
+                ckpt = tf.train.get_checkpoint_state(self.param.path_model_load)
                 self.saver.restore(sess,ckpt.model_checkpoint_path)
             else:
                 sess.run(tf.global_variables_initializer())
-
             coord = tf.train.Coordinator()
             if self.param.xpu=='/gpu:0' and self.param.n_agents==1:
                 self.agents[0].work(self.param,sess,coord,self.saver)
@@ -519,11 +504,12 @@ class Run():
             else:
                 agent_threads = []
                 for agent in self.agents:
-                    agent_work = lambda: agent.work(self.param,sess,coord,self.saver)
+                    agent_work = lambda: agent.work(sess,coord)
                     #agent_work = lambda: agent.work(param.gamma,sess,coord,saver,param.train,param.interval_ckpt,param.interval_pic)
                     thread = threading.Thread(target=(agent_work))
                     thread.start()
                     agent_threads.append(thread)
                 coord.join(agent_threads)
+
 
 print('End of file.')
