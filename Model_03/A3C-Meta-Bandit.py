@@ -26,6 +26,9 @@ param_basic={
 
     'environment' : 'Two_Armed_Bandit',
 
+    #'episode_stop' : 100000,
+    'episode_stop' : 20,
+
     'interval_ckpt': 1000,
     #'interval_pic': 100,
     'interval_pic': 0,
@@ -201,8 +204,10 @@ class LSTM_RNN_Network():
                 #Get gradients from local network using local losses
                 local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
                 self.gradients = tf.gradients(self.loss,local_vars)
-                self.var_norms = tf.global_norm(local_vars) # return square root of the sum of squares of l2 norms of the input tensors
-                grads,self.grad_norms = tf.clip_by_global_norm(self.gradients,50.0) # return a list of tensors clipped using global norms
+                # return square root of the sum of squares of l2 norms of the input tensors
+                self.var_norms = tf.global_norm(local_vars)
+                # return a list of tensors clipped using global norms
+                grads,self.grad_norms = tf.clip_by_global_norm(self.gradients,50.0)
                 
                 # Apply local gradients to master network
                 master_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'master')
@@ -224,17 +229,14 @@ class A2C_Agent():
         self.saver=saver
         self.global_episodes = global_episodes
         self.increment = self.global_episodes.assign_add(1)
-        #self.episode_rewards = []
-        #self.episode_lengths = []
-        #self.episode_mean_values = []
-        self.summary_writer = tf.summary.FileWriter(self.param.path_summary+"/"+self.name)   # store summaries for each agent
+        # store summaries for each agent
+        self.summary_writer = tf.summary.FileWriter(self.param.path_summary+"/"+self.name)
 
         # Create the local copy of the network and the tensorflow op to copy master paramters to local network
         self.local_AC = LSTM_RNN_Network(self.param,self.n_actions,self.name,trainer)
         self.update_local_ops = update_target_graph('master',self.name)        
         
         
-    #def train(self,episode_buffer,sess,gamma,bootstrap_value):
     def train(self,episode_buffer,sess):
         timesteps = episode_buffer[:,0]
         actions = episode_buffer[:,1]
@@ -254,8 +256,6 @@ class A2C_Agent():
         advantages = rewards + self.param.gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantages = discount(advantages,self.param.gamma)
 
-        # Update the master network using gradients from loss
-        # Generate network statistics to periodically save
         rnn_state = self.local_AC.state_init
         feed_dict = {
             self.local_AC.target_v:discounted_rewards,
@@ -282,7 +282,6 @@ class A2C_Agent():
 
         return t_l, v_l, p_l, e_l, g_n, v_n
         
-    #def work(self,gamma,sess,coord,saver,train,interval_ckpt,interval_pic):
     def work(self,sess,coord):
         episode_count_global = sess.run(self.global_episodes)           # refer to global episode counter over all agents
         episode_count_local = 0
@@ -398,6 +397,10 @@ class A2C_Agent():
                 self.summary_writer.add_summary(summary_episode, episode_count_global)
                 self.summary_writer.flush()
 
+                if episode_count_global == self.param.episode_stop:
+                    print('Reached maximum episode count: '+ str(episode_count_global) + '.                           ')
+                    break
+
                 episode_count_local += 1        # add to local counter in all agents
 
 
@@ -463,19 +466,19 @@ class Run():
         with open(path_save+'/parameters.json', 'w') as fp:
             json.dump(self.param.__dict__, fp, indent=1)
 
-        self.set_agents()
-        self.run()
-
-    def set_agents(self):
+    def run(self):
         tf.reset_default_graph()
         # Setup agents for multiple threading
         with tf.device(self.param.xpu):
-            self.global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)  # counter of total episodes defined outside A2C_Agent class
+            # counter of total episodes defined outside A2C_Agent class
+            self.global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)
             if self.param.optimizer == "Adam":
                 self.trainer = tf.train.AdamOptimizer(learning_rate=self.param.learning_rate)
             elif self.param.optimizer == "RMSProp":
                 self.trainer = tf.train.RMSPropOptimizer(learning_rate=self.param.learning_rate)
-            self.master_network = LSTM_RNN_Network(self.param,Two_Armed_Bandit(self.param.bandit_difficulty).n_actions,'master',None) # Generate master network
+            self.master_network = LSTM_RNN_Network(self.param,
+                                                Two_Armed_Bandit(self.param.bandit_difficulty).n_actions,
+                                                'master',None) # Generate master network
             #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
             self.saver = tf.train.Saver(max_to_keep=5)
             self.agents = []
@@ -484,7 +487,6 @@ class Run():
                 self.agents.append(A2C_Agent(i,self.param,Two_Armed_Bandit(self.param.bandit_difficulty),
                                             self.trainer,self.saver,self.global_episodes))
             
-    def run(self):
         # Run agents
         #config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
         config=tf.ConfigProto(allow_soft_placement=True)
@@ -498,14 +500,12 @@ class Run():
             coord = tf.train.Coordinator()
             if self.param.xpu=='/gpu:0' and self.param.n_agents==1:
                 self.agents[0].work(self.param,sess,coord,self.saver)
-                #agents[0].work(param.gamma,sess,coord,saver,param.train,param.interval_ckpt,param.interval_pic)
             elif self.param.xpu=='/gpu:0' and self.param.n_agents>1:
                 raise ValueError('Multi-threading not allowed with GPU')
             else:
                 agent_threads = []
                 for agent in self.agents:
                     agent_work = lambda: agent.work(sess,coord)
-                    #agent_work = lambda: agent.work(param.gamma,sess,coord,saver,param.train,param.interval_ckpt,param.interval_pic)
                     thread = threading.Thread(target=(agent_work))
                     thread.start()
                     agent_threads.append(thread)
