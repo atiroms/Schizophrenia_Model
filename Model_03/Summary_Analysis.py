@@ -9,8 +9,28 @@
 # PARAMETERS #
 ##############
 
-#data_path = './saved_data/20180920_130605/summary'
-data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180921_011111/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180914_000352/summary'   # summary saved every 50 episodes
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180918_211807/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180921_011111/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180923_114142/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_235841/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180926_002716/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180929_001701/summary'
+data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20181002_010133/summary'
+
+#data_path = 'C:/Users/atiro/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary'
+
+data_paths=[
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180918_211807/summary',
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180921_011111/summary',
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180923_114142/summary',
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630/summary',
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_235841/summary',
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180926_002716/summary',
+    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary',
+]
 
 
 #############
@@ -25,57 +45,123 @@ import plotly as py
 import cufflinks as cf
 import glob
 import os
+import math
 
 
-###################
-# DATA EXTRACTION #
-###################
+##############################
+# DATA EXTRACTION AND SAVING #
+##############################
 
-data_paths = glob.glob(os.path.join(data_path, "*", "event*"))
+class Extract():
+    def __init__(self,data_path=data_path):
+        # Collect summary files
+        self.data_path=data_path
+        self.data_paths = glob.glob(os.path.join(self.data_path, '*', 'event*'))
 
-for p in data_paths:
-    for e in tf.train.summary_iterator(p):
-        print("Extracting episode " + str(int(e.step)), end="\r")
-        if e.step==0:
-            colnames=['Simulation/Global Episode Count']+[v.tag for v in e.summary.value]
-            df=pd.DataFrame(columns=colnames)
-        data=[e.step]+[v.simple_value for v in e.summary.value]
-        df.loc[int(e.step)]=data
+        # Extract data from summary files
+        print('Starting data extraction.')
+        for p in self.data_paths:
+            count=0
+            for e in tf.train.summary_iterator(p):
+                print('Extracting episode ' + str(int(e.step)), end='\r')
+                if count==1:
+                #if count==0:
+                    colnames=['Simulation/Global Episode Count']+[v.tag for v in e.summary.value]
+                    self.output=pd.DataFrame(columns=colnames)
 
+                if count>0:
+                #if count>-1:
+                    data=[e.step]+[v.simple_value for v in e.summary.value]
+                    self.output.loc[count]=data
+                count+=1
 
-###############
-# DATA SAVING #
-###############
+        print('\n')
+        print('Finished data extraction. ' + str(count) + ' timepoints.')
+        print('Saving extracted data.')
 
-colnames=df.columns.values
-df.columns=list(range(df.shape[1]))
-hdf=pd.HDFStore(data_path+'/summary.h5')
-hdf.put('summary',df,format='table',append=False,data_columns=True)
-hdf.put('colnames',colnames)
-hdf.close()
+        # Save summary files in hdf5 format
+        # '/' cannot be used as column names when stored in hdf5, so column names are stored separately
+        colnames=pd.Series(self.output.columns.values,index=('col'+str(i) for i in range(self.output.shape[1])))
+        self.output.columns=list('col'+str(i) for i in range(self.output.shape[1]))
+        hdf=pd.HDFStore(self.data_path+'/summary.h5')
+        hdf.put('summary',self.output,format='table',append=False,data_columns=True)
+        hdf.put('colnames',colnames)
+        hdf.close()
+        self.output.columns=colnames.tolist()
+        print('Finished saving data.')
 
 
 ################
 # DATA LOADING #
 ################
 
-hdf = pd.HDFStore(data_path+'/summary.h5')
-df = pd.DataFrame(df['summary'])
-hdf.close()
+class Load():
+    def __init__(self,data_path=data_path):
+        print('Starting hdf5 file loading.')
+        self.data_path=data_path
+        hdf = pd.HDFStore(self.data_path+'/summary.h5')
+        self.output = pd.DataFrame(hdf['summary'])
+        self.output.columns=hdf['colnames'].tolist()
+        hdf.close()
+        print('Finished hdf5 file loading.')
 
 
 #################
 # VISUALIZATION #
 #################
 
-#cf.set_config_file(offline=True, theme="white", offline_show_link=False)
-#cf.go_offline()
+class Visualize():
+    def __init__(self,dataframe,data_path=data_path,key='Performance/Reward'):
+        self.df=dataframe
+        self.data_path=data_path
+        self.key=key
+        #cf.set_config_file(offline=True, theme="white", offline_show_link=False)
+        #cf.go_offline()
+        #df.plot(x='Simulation/Global Episode Count', y='Performance/Reward')
+        #plt.show()
+        #df.iplot(kind="scatter", mode='markers', x='Simulation/Global Episode Count', y='Performance/Reward')
 
-#df.plot(x='Simulation/Global Episode Count', y='Performance/Reward')
-#plt.show()
+        fig = self.df.iplot(
+            kind="scatter", asFigure=True,x='Simulation/Global Episode Count', y='Performance/Reward',
+            title='Reward - Episode', xTitle='Episode', yTitle='Reward',
+            colors=['blue'])
+        #fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Perf/Reward')
+        py.offline.plot(fig, filename=self.data_path + '/Reward.html')
+        print('Generated graph.')
 
-#df.iplot(kind="scatter", mode='markers', x='Simulation/Global Episode Count', y='Performance/Reward')
+
+#########################
+# AVERAGE OVER EPISODES #
+#########################
+
+class AveEpisode():
+    def __init__(self,dataframe,interval):
+        self.input=dataframe
+        self.interval=interval
+        self.length=math.floor(len(self.input)/self.interval)
+        self.calc_average()
+
+    def calc_average(self):
+        print('Starting calculation of averages.')
+        print('Calculating averages over ' + str(self.interval) + ' episodes.')
+        self.output=pd.DataFrame(columns=self.input.columns)
+        for i in range(self.length):
+            self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
+        print('Finished calculating averages.')
 
 
-fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Performance/Reward')
-py.offline.plot(fig, filename='example_scatter')
+##############################
+# REWARD AVERAGE GRAPH BATCH #
+##############################
+
+class RewardAverageGraphBatch():
+    def __init__(self,data_paths=data_paths):
+        for p in data_paths:
+            print('Calculating ' + p + '.')
+            df=Load(data_path=p).output
+            ave=AveEpisode(dataframe=df,interval=100).output
+            vis=Visualize(dataframe=ave,data_path=p)
+        print('Finished batch calculation.')
+
+
+print('End of file.')
