@@ -35,11 +35,11 @@ param_basic={
     'interval_var': 10
 }
 
-param_batch={
-    '1':{'param':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
-    '2':{'param':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']},
-    '3':{'param':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
-}
+param_batch=[
+    {'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
+    {'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']},
+    {'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
+]
 
 
 #############
@@ -524,12 +524,49 @@ class Run():
 
 class BatchRun():
     def __init__(self,param_batch=param_batch):
-        n_param=len(param_batch)
-        for param in param_batch.values():
-            param['param']
-            param['min']
-            param['max']
-            param
+        self.n_param=len(param_batch)
+        batch_current_id=np.zeros((self.n_param,),dtype=np.int16)
+        colnames=[]
+        self.batch_table_length=1
+        for i in range(self.n_param):
+            self.batch_table_length*=param_batch[i]['n']
+            colnames.append(param_batch[i]['name'])
+        colnames.append('done')
+        self.batch_table=pd.DataFrame(columns=colnames,index=range(self.batch_table_length))
+
+        batch_count=0
+        flag_break=0        # 1: batch current id update successfull, 2: end of recursion
+        while flag_break < 2:
+            for i in range(self.n_param):
+                param=param_batch[i]
+                if param['type']=='list':
+                    self.batch_table.iloc[batch_count,i] = param['list'][batch_current_id[i]]
+                elif param['type']=='parametric':
+                    if param['method']=='grid':
+                        self.batch_table.iloc[batch_count,i] = param['min']+(param['max']-param['min'])*batch_current_id[i]/(param['n']-1)
+                    elif param['method']=='random':
+                        self.batch_table.iloc[batch_count,i] = np.random.uniform(low=param['min'],high=param['max'])
+                else:
+                    raise ValueError('Incorrect batch parameter type.')
+            self.batch_table.iloc[batch_count,self.n_param]=0
+
+            param_id=self.n_param-1
+            flag_break=0
+            while flag_break < 1:
+                batch_current_id[param_id] += 1
+                if batch_current_id[param_id] < param_batch[param_id]['n']:
+                    # break updating id when within limit
+                    flag_break = 1
+                else:
+                    # reset current level to 0
+                    batch_current_id[param_id] = 0
+                    # move to the upper level
+                    param_id -= 1
+                    if param_id < 0:
+                        # break creating list when reached end
+                        flag_break = 2
+
+            batch_count += 1
 
 
 print('End of file.')

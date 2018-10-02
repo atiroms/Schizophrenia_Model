@@ -44,3 +44,8 @@ b={
     a+'1':2
 }
 
+import pandas as import pd
+
+df=pd.DataFrame(columns=['a','b'],index=range(5))
+df
+df.iloc[0,1]=1
