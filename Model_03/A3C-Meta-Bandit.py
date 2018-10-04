@@ -20,7 +20,9 @@ param_basic={
 
     'train' : True,
     'load_model' : False,
-    'path_model_load' : './saved_data/20180917_011631',
+    'path_load' : './saved_data/20180917_011631',
+
+    'path_save_master' : './saved_data',
 
     'n_agents' : 1,                       # number of agents that acts in parallel
 
@@ -34,11 +36,35 @@ param_basic={
     'interval_pic': 0,
     'interval_var': 10
 }
+param_default={    # Wang 2018 parameters
+    'n_cells_lstm' : 48,                  # number of cells in LSTM-RNN network
+    'bootstrap_value' : 0.0,
+    'bandit_difficulty' : 'uniform',      # select "independent" for independent bandit
+    'gamma' : .9,                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
+    'optimizer' : 'RMSProp',              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
+    'learning_rate' : 0.0007,             # Wang Nat Neurosci 2018
+    'cost_statevalue_estimate' : 0.05,    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
+    'cost_entropy' : 0.05,                # 0.05 in Wang 2018 and awjuliani/meta-RL
+    'dummy_counter' : 0                   # dummy counter used for batch calculation
+}
+param_awjuliani={
+    'gamma' : .8,                         # 0.8 in awjuliani/meta-RL
+    'optimizer' : 'Adam',
+    'learning_rate' : 1e-3,               # awjuliani/meta-RL
+    'cost_statevalue_estimate' : 0.5,
+}
+param_Wang2018_fast={
+    'learning_rate' : 0.007
+}
+param_Wang2018_satatevalue={
+    'cost_statevalue_estimate' : 0.5
+}
 
 param_batch=[
-    {'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
-    {'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']},
-    {'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
+    {'name':'dummy_counter', 'n':5, 'type':'parametric', 'method':'grid', 'min':0,'max':4}
+    #{'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
+    #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']},
+    #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
 ]
 
 
@@ -236,7 +262,7 @@ class A2C_Agent():
         self.global_episodes = global_episodes
         self.increment = self.global_episodes.assign_add(1)
         # store summaries for each agent
-        self.summary_writer = tf.summary.FileWriter(self.param.path_summary+"/"+self.name)
+        self.summary_writer = tf.summary.FileWriter(self.param.path_save+"/summary/"+self.name)
 
         # Create the local copy of the network and the tensorflow op to copy master paramters to local network
         self.local_AC = LSTM_RNN_Network(self.param,self.n_actions,self.name,trainer)
@@ -292,7 +318,7 @@ class A2C_Agent():
         episode_count_global = sess.run(self.global_episodes)           # refer to global episode counter over all agents
         episode_count_local = 0
         agent_steps = 0
-        print("Starting " + self.name + "                    ")
+        #print("Starting " + self.name + "                    ")
         with sess.as_default(), sess.graph.as_default():                 
             while not coord.should_stop():                              # iterate over episodes
                 episode_count_global = sess.run(self.global_episodes)   # refer to global episode counter over all agents
@@ -352,15 +378,15 @@ class A2C_Agent():
                 df_episode.insert(loc=0, column='episode_count', value=episode_count_global)
                 df_episode.ix[:,['episode_count','agent','timestep','action']]=df_episode.ix[:,['episode_count','agent','timestep','action']].astype('int64')
 
-                hdf=pd.HDFStore(self.param.path_activity+'/activity.h5')
+                hdf=pd.HDFStore(self.param.path_save+'/activity/activity.h5')
                 hdf.put('activity',df_episode,format='table',append=True,data_columns=True)
                 hdf.close()
                     
                 # save model parameters as tensorflow saver
                 if self.param.interval_ckpt>0:
                     if episode_count_global % self.param.interval_ckpt == 0 and self.param.train == True:
-                        self.saver.save(sess,self.param.path_model+'/'+str(episode_count_global)+'.ckpt')
-                        print('Saved model parameters at global episode ' + str(episode_count_global) + '                 ')
+                        self.saver.save(sess,self.param.path_save+'/model/'+str(episode_count_global)+'.ckpt')
+                        #print('Saved model parameters at global episode ' + str(episode_count_global) + '.                 ')
 
                 # save model trainable variables in hdf5 format
                 if self.param.interval_var>0:
@@ -376,14 +402,14 @@ class A2C_Agent():
                         #all_vars=all_vars.reshape((1,-1))
                         #all_vars=pd.DataFrame(all_vars,columns=('var'+str(i) for i in range(all_vars.shape[1])))
                         #print(type(all_vars))
-                        hdf=pd.HDFStore(self.param.path_model+'/variable.h5')
+                        hdf=pd.HDFStore(self.param.path_save+'/model/variable.h5')
                         hdf.put('variable',all_vars,format='table' ,append=True,data_columns=True)
                         hdf.close()
 
                 # save gif image of fast learning
                 if self.param.interval_pic>0:
                     if episode_count_global % self.param.interval_pic == 0:
-                        self.env.make_gif(episode_buffer,self.param.path_pic,episode_count_global)
+                        self.env.make_gif(episode_buffer, self.param.path_save + '/pic', episode_count_global)
 
                 # Save episode summary in /summary folder
                 summary_episode = tf.Summary()
@@ -415,38 +441,25 @@ class A2C_Agent():
 ####################
 
 class Parameters():
-    def __init__(self,datetime_start,param_basic,paths):
-        self.datetime_start=datetime_start
-        for p in [param_basic, paths]:
-            for key,value in p.items():
-                setattr(self,key,value)
+    def __init__(self,param_basic):
+        self.add_item(param_basic)
         if self.param_set == 'Wang2018':
-            self.default()
+            self.add_item(param_default)
         elif self.param_set == 'awjuliani':
-            self.default()
-            self.gamma = .8                         # 0.8 in awjuliani/meta-RL
-            self.optimizer = 'Adam'
-            self.learning_rate = 1e-3               # awjuliani/meta-RL
-            self.cost_statevalue_estimate = 0.5
+            self.add_item(param_default)
+            self.add_item(param_awjuliani)
         elif self.param_set == 'Wang2018_fast':     # 10 times larger learning rate
-            self.default()
-            self.learning_rate = 0.007              # Wang Nat Neurosci 2018
+            self.add_item(param_default)
+            self.add_item(param_Wang2018_fast)
         elif self.param_set == 'Wang2018_statevalue':
-            self.default()
-            self.cost_statevalue_estimate = 0.5     # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
+            self.add_item(param_default)
+            self.add_item(param_Wang2018_satatevalue)
         else:
             raise ValueError('Undefined parameter set name: ' + self.param_set + '.')
-        
-    def default(self):
-        self.n_cells_lstm = 48                  # number of cells in LSTM-RNN network
-        self.bootstrap_value = 0.0
-        self.bandit_difficulty = 'uniform'      # select "independent" for independent bandit
-        # Wang 2018 parameters
-        self.gamma = .9                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
-        self.optimizer = 'RMSProp'              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
-        self.learning_rate = 0.0007             # Wang Nat Neurosci 2018
-        self.cost_statevalue_estimate = 0.05    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
-        self.cost_entropy = 0.05                # 0.05 in Wang 2018 and awjuliani/meta-RL
+    
+    def add_item(self,dictionary):
+        for key,value in dictionary.items():
+            setattr(self,key,value)
 
 
 #############
@@ -454,25 +467,27 @@ class Parameters():
 #############
 
 class Run():
-    def __init__(self,param_basic=param_basic):
-        # Directory organization for saving
-        datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
-        path_save="./saved_data/"+datetime_start
-        paths={
-            'path_save': path_save
-        }
-        for subdir in ['model','pic','summary','activity']:
-            paths['path_'+subdir]=path_save+'/'+subdir
-        for path in paths.values():
-            if not os.path.exists(path):
-                os.makedirs(path)
+    def __init__(self,param_basic=param_basic,param_change=None):
+        self.param=Parameters(param_basic)
+        if param_change is not None:
+            self.param.add_item(param_change)
 
-        # Parameter setting and saving
-        self.param=Parameters(datetime_start,param_basic,paths)
+        # Timestamping directory name
+        datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
+        path_save=self.param.path_save_master+'/'+datetime_start
+        self.param.add_item({'datetime_start':datetime_start, 'path_save':path_save})
+
+        if not os.path.exists(path_save):
+            os.makedirs(path_save)
+        for subdir in ['model','pic','summary','activity']:
+            if not os.path.exists(path_save + '/' + subdir):
+                os.makedirs(path_save + '/' + subdir)
+
         with open(path_save+'/parameters.json', 'w') as fp:
             json.dump(self.param.__dict__, fp, indent=1)
 
     def run(self):
+        print('Starting calculation: '+ self.param.datetime_start + '.')
         tf.reset_default_graph()
         # Setup agents for multiple threading
         with tf.device(self.param.xpu):
@@ -498,8 +513,8 @@ class Run():
         config=tf.ConfigProto(allow_soft_placement=True)
         with tf.Session(config=config) as sess:
             if self.param.load_model == True:
-                print('Loading Model...')
-                ckpt = tf.train.get_checkpoint_state(self.param.path_model_load)
+                print('Loading model: '+ self.param.path_load + '.')
+                ckpt = tf.train.get_checkpoint_state(self.param.path_load)
                 self.saver.restore(sess,ckpt.model_checkpoint_path)
             else:
                 sess.run(tf.global_variables_initializer())
@@ -507,7 +522,7 @@ class Run():
             if self.param.xpu=='/gpu:0' and self.param.n_agents==1:
                 self.agents[0].work(self.param,sess,coord,self.saver)
             elif self.param.xpu=='/gpu:0' and self.param.n_agents>1:
-                raise ValueError('Multi-threading not allowed with GPU')
+                raise ValueError('Multi-threading not allowed with GPU.')
             else:
                 agent_threads = []
                 for agent in self.agents:
@@ -516,6 +531,7 @@ class Run():
                     thread.start()
                     agent_threads.append(thread)
                 coord.join(agent_threads)
+        print('Finished calculation: '+ self.param.datetime_start + '.')
 
 
 #############
@@ -523,57 +539,75 @@ class Run():
 #############
 
 class BatchRun():
-    def __init__(self,param_batch=param_batch):
+    def __init__(self,param_batch=param_batch,param_basic=param_basic):
         self.n_param=len(param_batch)
-        batch_current_id=np.zeros((self.n_param,),dtype=np.int16)
-        colnames=[]
-        self.batch_table_length=1
-        for i in range(self.n_param):
-            self.batch_table_length*=param_batch[i]['n']
-            colnames.append(param_batch[i]['name'])
-        colnames.append('done')
-        self.batch_table=pd.DataFrame(columns=colnames,index=range(self.batch_table_length))
+        # Directory organization for saving
+        datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
+        self.path_save_batch=param_basic['path_save_master'] + '/' + datetime_start
+        if not os.path.exists(self.path_save_batch):
+            os.makedirs(self.path_save_batch)
 
+        # Batch table preparation
+        batch_current_id=np.zeros((self.n_param,),dtype=np.int16)
+        self.batch_table=pd.DataFrame()
         batch_count=0
         flag_break=0        # 1: batch current id update successfull, 2: end of recursion
         while flag_break < 2:
             for i in range(self.n_param):
                 param=param_batch[i]
                 if param['type']=='list':
-                    self.batch_table.iloc[batch_count,i] = param['list'][batch_current_id[i]]
+                    self.batch_table.loc[batch_count,param['name']] = param['list'][batch_current_id[i]]
                 elif param['type']=='parametric':
                     if param['method']=='grid':
-                        self.batch_table.iloc[batch_count,i] = param['min']+(param['max']-param['min'])*batch_current_id[i]/(param['n']-1)
+                        self.batch_table.loc[batch_count,param['name']] = param['min']+(param['max']-param['min'])*batch_current_id[i]/(param['n']-1)
                     elif param['method']=='random':
-                        self.batch_table.iloc[batch_count,i] = np.random.uniform(low=param['min'],high=param['max'])
+                        self.batch_table.loc[batch_count,param['name']] = np.random.uniform(low=param['min'],high=param['max'])
                 else:
                     raise ValueError('Incorrect batch parameter type.')
-            self.batch_table.iloc[batch_count,self.n_param]=0
-
-            param_id=self.n_param-1
+            
+            param_id_level=self.n_param-1
             flag_break=0
             while flag_break < 1:
-                batch_current_id[param_id] += 1
-                if batch_current_id[param_id] < param_batch[param_id]['n']:
+                batch_current_id[param_id_level] += 1
+                if batch_current_id[param_id_level] < param_batch[param_id_level]['n']:
                     # break updating id when within limit
                     flag_break = 1
                 else:
                     # reset current level to 0
-                    batch_current_id[param_id] = 0
+                    batch_current_id[param_id_level] = 0
                     # move to the upper level
-                    param_id -= 1
-                    if param_id < 0:
+                    param_id_level -= 1
+                    if param_id_level < 0:
                         # break creating list when reached end
                         flag_break = 2
 
             batch_count += 1
 
-    def run():
-        for i in range(self.batch_table_length):
-            run = Run(basic_param)
-            param_dict={}
-            for j in range(self.n_param):
-                param_dict[self.batch_table.columns[j]]=self.batch_table.iloc[i,j]
-            
+        self.batch_table.loc[:,'datetime_start']=np.NaN
+        self.batch_table.loc[:,'done']=False
+        self.save_batch_table()
+
+        with open(self.path_save_batch+'/parameters_batch.json', 'w') as fp:
+            json.dump(param_batch, fp, indent=1)
+
+    def run(self):
+        for i in range(len(self.batch_table)):
+            print('Starting batch: ' + str(i + 1) + '/' + str(len(self.batch_table)))
+            param_dict=self.batch_table.loc[i,self.batch_table.columns.difference(['datetime_start','done'])].to_dict()
+            param_dict['path_save_master']=self.path_save_batch
+            run=Run(param_basic=param_basic,param_change=param_dict)
+            datetime_start=run.param.datetime_start
+            self.batch_table.loc[i,'datetime_start']=datetime_start
+            self.save_batch_table()
+            run.run()
+            self.batch_table.loc[i,'done']=True
+            self.save_batch_table()
+        print('Finished batch calculation.')
+        
+    def save_batch_table(self):
+        hdf=pd.HDFStore(self.path_save_batch+'/batch_table.h5')
+        hdf.put('batch_table',self.batch_table,format='table',append=False,data_columns=True)
+        hdf.close()
+
 
 print('End of file.')

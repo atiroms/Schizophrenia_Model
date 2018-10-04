@@ -21,3 +21,21 @@ df.ix[:,['d','b']]=df.ix[:,['d','b']].astype('float64')
 
 df.info()
 
+
+df.iloc[1,:]
+
+df.iloc[1,:].to_dict()
+
+
+for i,row in df.iterrows():
+    datadict=row.to_dict()
+    print(datadict)
+
+df=pd.DataFrame()
+
+df
+
+
+for i in range(len(df)):
+    dictionary=df.iloc[i,:].to_dict()
+    print(dictionary)
