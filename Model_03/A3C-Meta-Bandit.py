@@ -2,7 +2,13 @@
 # DESCRIPTION #
 ###############
 
-# python code modified from awjuliani/meta-RL implementation of meta reinforcement learning
+# Python code for meta reinforcement learning
+# For a single run,
+#   run=Run()
+#   run.run()
+# For batch runs,
+#   batch=BatchRun()
+#   batch.run()
 
 
 ##############
