@@ -32,15 +32,16 @@ param_basic={
 
     'n_agents' : 1,                       # number of agents that acts in parallel
 
+    'agent': 'A2C',
     'environment' : 'Two_Armed_Bandit',
 
     #'episode_stop' : 100000,
-    'episode_stop' : 20,
+    'episode_stop' : 100,
 
-    'interval_ckpt': 1000,
+    'interval_ckpt': 1000,              # interval to save network parameters in tf default format
     #'interval_pic': 100,
-    'interval_pic': 0,
-    'interval_var': 10
+    'interval_pic': 0,                  # interval to save task pictures
+    'interval_var': 10                  # interval to save trainable network variables in original format
 }
 param_default={    # Wang 2018 parameters
     'n_cells_lstm' : 48,                  # number of cells in LSTM-RNN network
@@ -53,7 +54,7 @@ param_default={    # Wang 2018 parameters
     'cost_entropy' : 0.05,                # 0.05 in Wang 2018 and awjuliani/meta-RL
     'dummy_counter' : 0                   # dummy counter used for batch calculation
 }
-param_awjuliani={
+param_awjuliani={   # awjuliani/metaRL parameters
     'gamma' : .8,                         # 0.8 in awjuliani/meta-RL
     'optimizer' : 'Adam',
     'learning_rate' : 1e-3,               # awjuliani/meta-RL
@@ -554,7 +555,7 @@ class BatchRun():
             os.makedirs(self.path_save_batch)
 
         # Batch table preparation
-        batch_current_id=np.zeros((self.n_param,),dtype=np.int16)
+        batch_current_id=np.zeros((self.n_param,),dtype=np.int16) # table of ids of iteration for each parameter
         self.batch_table=pd.DataFrame()
         batch_count=0
         flag_break=0        # 1: batch current id update successfull, 2: end of recursion
