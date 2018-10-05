@@ -35,8 +35,8 @@ param_basic={
     'agent': 'A2C',
     'environment' : 'Two_Armed_Bandit',
 
-    #'episode_stop' : 100000,
-    'episode_stop' : 100,
+    'episode_stop' : 50000,
+    #'episode_stop' : 20,
 
     'interval_ckpt': 1000,              # interval to save network parameters in tf default format
     #'interval_pic': 100,
@@ -68,7 +68,8 @@ param_Wang2018_satatevalue={
 }
 
 param_batch=[
-    {'name':'dummy_counter', 'n':5, 'type':'parametric', 'method':'grid', 'min':0,'max':4}
+    {'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}
+    #{'name':'dummy_counter', 'n':5, 'type':'parametric', 'method':'grid', 'min':0,'max':4}
     #{'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
     #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']},
     #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
