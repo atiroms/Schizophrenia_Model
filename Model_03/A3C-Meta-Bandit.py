@@ -35,8 +35,8 @@ param_basic={
     'agent': 'A2C',
     'environment' : 'Two_Armed_Bandit',
 
-    'episode_stop' : 50000,
-    #'episode_stop' : 20,
+    #'episode_stop' : 50000,
+    'episode_stop' : 20,
 
     'interval_ckpt': 1000,              # interval to save network parameters in tf default format
     #'interval_pic': 100,
@@ -190,19 +190,26 @@ class LSTM_RNN_Network():
             self.prev_actions = tf.placeholder(shape=[None],dtype=tf.int32)
             self.timestep = tf.placeholder(shape=[None,1],dtype=tf.float32)
             self.prev_actions_onehot = tf.one_hot(self.prev_actions,n_actions,dtype=tf.float32)
-
+            
+            # Input to LSTM-RNN. timestep is fed
             hidden = tf.concat([self.prev_rewards,self.prev_actions_onehot,self.timestep],1)
             
-            #Recurrent network for temporal dependencies
+            # LSTM cells
             lstm_cell = tf.contrib.rnn.BasicLSTMCell(self.param.n_cells_lstm,state_is_tuple=True, name='LSTM_Cells')
+            
+            # Initial all-zero state of LSTM cells
             c_init = np.zeros((1, lstm_cell.state_size.c), np.float32)
             h_init = np.zeros((1, lstm_cell.state_size.h), np.float32)
             self.state_init = [c_init, h_init]
+
+            # Placeholder of lstm cell states input
             c_in = tf.placeholder(tf.float32, [1, lstm_cell.state_size.c])
             h_in = tf.placeholder(tf.float32, [1, lstm_cell.state_size.h])
             self.state_in = (c_in, h_in)
+
             rnn_in = tf.expand_dims(hidden, [0])
-            step_size = tf.shape(self.prev_rewards)[:1]     # returns shape of the tensor
+            # returns length of reward array along the first axis (usually zero?)
+            step_size = tf.shape(self.prev_rewards)[:1]
             state_in = tf.contrib.rnn.LSTMStateTuple(c_in, h_in)
             lstm_outputs, lstm_state = tf.nn.dynamic_rnn(
                 lstm_cell, rnn_in, initial_state=state_in, sequence_length=step_size,
@@ -344,7 +351,7 @@ class A2C_Agent():
                 a = 0
                 t = 0
                 bandit = self.env.reset()                               # returns np.array of bandit probabilities
-                rnn_state = self.local_AC.state_init
+                rnn_state = self.local_AC.state_init                    # returns zero array with LSTM cell size
                 
                 # act
                 while d == False:                                       # d is "done" flag returned from the environment
