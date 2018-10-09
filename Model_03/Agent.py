@@ -2,6 +2,8 @@
 # DESCRIPTION #
 ###############
 
+# Python code for reinforcement learning agents used for meta-RL.
+
 
 #############
 # LIBRARIES #

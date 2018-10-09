@@ -2,6 +2,7 @@
 # DESCRIPTION #
 ###############
 
+# Python code for neural networks used for meta-RL.
 
 #############
 # LIBRARIES #

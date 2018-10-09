@@ -2,6 +2,8 @@
 # DESCRIPTION #
 ###############
 
+# Python code for task environment used for meta-RL.
+
 
 #############
 # LIBRARIES #
