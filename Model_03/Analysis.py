@@ -18,9 +18,10 @@
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180926_002716'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180928_233909'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180929_001701'
-data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20181002_010133'
+#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20181002_010133'
 
 #data_path = 'C:/Users/atiro/Dropbox/Schizophrenia_Model/saved_data/20180928_233909'
+data_path = 'C:/Users/atiro/GitHub/Schizophrenia_Model/Model_03/saved_data/20181010_054352'
 
 # data path for activity analysis
 #data_path = './saved_data/20180920_130605'
@@ -69,7 +70,7 @@ class Extract_Checkpoint():
         for p in self.data_paths:
             count=0
             for e in tf.train.summary_iterator(p):
-                print('Extracting episode ' + str(int(e.step)), end='\r')
+                print('Extracting episode ' + str(int(e.step)), end='/r')
                 if count==1:
                 #if count==0:
                     colnames=['Simulation/Global Episode Count']+[v.tag for v in e.summary.value]
@@ -81,7 +82,7 @@ class Extract_Checkpoint():
                     self.output.loc[count]=data
                 count+=1
 
-        print('\n')
+        print('/n')
         print('Finished data extraction. ' + str(count) + ' timepoints.')
         print('Saving extracted data.')
 
@@ -107,10 +108,18 @@ class Load_Summary():
         self.data_path=data_path + '/summary'
         hdf = pd.HDFStore(self.data_path+'/summary.h5')
         self.output = pd.DataFrame(hdf['summary'])
-        self.output.columns=hdf['colnames'].tolist()
         hdf.close()
         print('Finished hdf5 file loading.')
 
+class Load_Summary_Old():
+    def __init__(self,data_path=data_path):
+        print('Starting hdf5 file loading.')
+        self.data_path=data_path + '/summary'
+        hdf = pd.HDFStore(self.data_path+'/summary.h5')
+        self.output = pd.DataFrame(hdf['summary'])
+        self.output.columns=hdf['colnames'].tolist()
+        hdf.close()
+        print('Finished hdf5 file loading.')
 
 class Load_Activity():
     def __init__(self,data_path=data_path):

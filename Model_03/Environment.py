@@ -43,12 +43,12 @@ class Two_Armed_Bandit():
 
         if self.difficulty != "restless" and self.difficulty != "independent":
             self.bandit = np.array([bandit_prob,1 - bandit_prob])
-
         return self.bandit
         
     def step(self,action):
         #Get a random number.
         if self.difficulty == "restless": self.set_restless_prob()  # sample from random walk list
+        timestep = self.timestep
         self.timestep += 1
         bandit = self.bandit[action]
         result = np.random.uniform()
@@ -62,7 +62,7 @@ class Two_Armed_Bandit():
             done = True
         else: 
             done = False
-        return reward,done,self.timestep
+        return reward,done,timestep
     
     def make_gif(self,buffer,path,count):     
         font = ImageFont.truetype("./resources/FreeSans.ttf", 24)

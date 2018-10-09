@@ -44,8 +44,46 @@ b={
     a+'1':2
 }
 
-import pandas as import pd
+
 
 df=pd.DataFrame(columns=['a','b'],index=range(5))
 df
 df.iloc[0,1]=1
+
+
+
+import numpy as np
+import pandas as pd
+
+df=pd.DataFrame(columns=['col1','col2'])
+
+a=[1.5,2.5]
+
+b=[int(1.5),2.5]
+
+df.loc[len(df)]=a
+df.loc[len(df)]=b
+
+print(df)
+
+df=pd.DataFrame(columns=['col1','col2'],index=range(10))
+
+print(df)
+
+df.loc[:,['col1','col2']]=[1,2]
+
+df.loc[:,['col3','col4']]=[1,2
+
+df.assign(col3=3,col4=4)
+
+df.dtypes
+
+df.loc[:,'col1'].astype('int64')
+
+df.loc[:,'col1']=df.loc[:,'col1'].astype('int64')
+
+df
+
+hdf=pd.HDFStore('test.h5')
+hdf.put('test',df,format='table',append=True,data_columns=True)
+hdf.close()

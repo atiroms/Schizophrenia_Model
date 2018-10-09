@@ -36,14 +36,18 @@ param_basic={
     'environment' : 'Two_Armed_Bandit',
 
     #'episode_stop' : 50000,
-    'episode_stop' : 20,
+    'episode_stop' : 100,
 
+    'interval_summary':1,               # interval to save simulation summary in original format
+    #'interval_summary':100,  
     'interval_ckpt': 1000,              # interval to save network parameters in tf default format
     #'interval_pic': 100,
     'interval_pic': 0,                  # interval to save task pictures
     'interval_activity':1,              # interval to save all activity of an episode
+    #'interval_activity':100,
     'interval_var': 10,                 # interval to save trainable network variables in original format
-    'interval_persist':1000             # interval of persistent saving
+    #'interval_persist':1000             # interval of persistent saving
+    'interval_persist':20
 }
 param_default={    # Wang 2018 parameters
     'n_cells_lstm' : 48,                  # number of cells in LSTM-RNN network
@@ -153,7 +157,7 @@ class Run():
         # Setup agents for multiple threading
         with tf.device(self.param.xpu):
             # counter of total episodes defined outside A2C_Agent class
-            self.global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)
+            self.episode_global = tf.Variable(0,dtype=tf.int32,name='episode_global',trainable=False)
             if self.param.optimizer == "Adam":
                 self.trainer = tf.train.AdamOptimizer(learning_rate=self.param.learning_rate)
             elif self.param.optimizer == "RMSProp":
@@ -167,7 +171,7 @@ class Run():
             # Create A2C_Agent classes
             for i in range(self.param.n_agents):
                 self.agents.append(A2C_Agent(i,self.param,Two_Armed_Bandit(self.param.bandit_difficulty),
-                                            self.trainer,self.saver,self.global_episodes))
+                                            self.trainer,self.saver,self.episode_global))
             
         # Run agents
         #config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
