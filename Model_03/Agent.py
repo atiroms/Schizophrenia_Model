@@ -31,6 +31,11 @@ class A2C_Agent():
         self.saver=saver
         self.global_episodes = global_episodes
         self.increment = self.global_episodes.assign_add(1)
+        self.df_summary=pd.DataFrame(columns=['episode_count','agent_id','arm0_prob','arm1_prob',
+                                              'timestep','action','reward','value'])
+        self.df_activity=pd.DataFrame()
+        self.df_variable=pd.DataFrame()
+
         # store summaries for each agent
         self.summary_writer = tf.summary.FileWriter(self.param.path_save+"/summary/"+self.name)
 
@@ -148,28 +153,19 @@ class A2C_Agent():
                 episode_buffer=np.array(episode_buffer)
                 
                 # train the network using the experience buffer at the end of the episode.
-                #if len(episode_buffer) != 0 and train == True:
                 if self.param.train == True:
                     t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess)
 
                 # Save activity in /activity/activity.h5 file
-                df_episode = pd.DataFrame(episode_buffer)
-                df_episode.columns = ['timestep', 'action', 'reward', 'value']
-                df_episode.insert(loc=1, column='arm0_prob', value=bandit[0])
-                df_episode.insert(loc=2, column='arm1_prob', value=bandit[1])
-                df_episode.insert(loc=0, column='agent', value=self.id)
-                df_episode.insert(loc=0, column='episode_count', value=episode_count_global)
-                df_episode.ix[:,['episode_count','agent','timestep','action']]=df_episode.ix[:,['episode_count','agent','timestep','action']].astype('int64')
-
-                hdf=pd.HDFStore(self.param.path_save+'/activity/activity.h5')
-                hdf.put('activity',df_episode,format='table',append=True,data_columns=True)
-                hdf.close()
-                    
-                # save model parameters as tensorflow saver
-                if self.param.interval_ckpt>0:
-                    if episode_count_global % self.param.interval_ckpt == 0 and self.param.train == True:
-                        self.saver.save(sess,self.param.path_save+'/model/'+str(episode_count_global)+'.ckpt')
-                        #print('Saved model parameters at global episode ' + str(episode_count_global) + '.                 ')
+                if self.param.interval_activity>0:
+                    if episode_count_global % self.param.interval_activity == 0:
+                        df_activity_episode = pd.DataFrame(episode_buffer,columns=['timestep', 'action', 'reward', 'value'])
+                        df_activity_episode.insert(loc=1, column='arm0_prob', value=bandit[0])
+                        df_activity_episode.insert(loc=2, column='arm1_prob', value=bandit[1])
+                        df_activity_episode.insert(loc=0, column='agent_id', value=self.id)
+                        df_activity_episode.insert(loc=0, column='episode_count', value=episode_count_global)
+                        df_activity_episode.ix[:,['episode_count','agent','timestep','action']]=df_episode.ix[:,['episode_count','agent','timestep','action']].astype('int64')
+                        self.df_activity=pd.concat(self.df_activity,df_activity_episode)
 
                 # save model trainable variables in hdf5 format
                 if self.param.interval_var>0:
@@ -182,17 +178,29 @@ class A2C_Agent():
                         all_vars=pd.DataFrame(all_vars,columns=['value'])
                         all_vars.insert(loc=0, column='variable', value=range(all_vars.shape[0]))
                         all_vars.insert(loc=0, column='episode_count',value=episode_count_global)
-                        #all_vars=all_vars.reshape((1,-1))
-                        #all_vars=pd.DataFrame(all_vars,columns=('var'+str(i) for i in range(all_vars.shape[1])))
-                        #print(type(all_vars))
                         hdf=pd.HDFStore(self.param.path_save+'/model/variable.h5')
                         hdf.put('variable',all_vars,format='table' ,append=True,data_columns=True)
                         hdf.close()
+
+                # persisitent saving of model parameters, actions and summary
+                if self.param.interaval_persist>0:
+                    if episode_count_global % self.parm_interval_persist == 0:
+                        hdf=pd.HDFStore(self.param.path_save+'/activity/activity.h5')
+                        hdf.put('activity',self.df_activity,format='table',append=True,data_columns=True)
+                        hdf.close()
+
+
 
                 # save gif image of fast learning
                 if self.param.interval_pic>0:
                     if episode_count_global % self.param.interval_pic == 0:
                         self.env.make_gif(episode_buffer, self.param.path_save + '/pic', episode_count_global)
+
+                # save model parameters as tensorflow saver
+                if self.param.interval_ckpt>0:
+                    if episode_count_global % self.param.interval_ckpt == 0 and self.param.train == True:
+                        self.saver.save(sess,self.param.path_save+'/model/'+str(episode_count_global)+'.ckpt')
+                        #print('Saved model parameters at global episode ' + str(episode_count_global) + '.                 ')
 
                 # Save episode summary in /summary folder
                 summary_episode = tf.Summary()

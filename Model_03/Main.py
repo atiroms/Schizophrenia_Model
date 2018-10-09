@@ -41,7 +41,9 @@ param_basic={
     'interval_ckpt': 1000,              # interval to save network parameters in tf default format
     #'interval_pic': 100,
     'interval_pic': 0,                  # interval to save task pictures
-    'interval_var': 10                  # interval to save trainable network variables in original format
+    'interval_activity':1,              # interval to save all activity of an episode
+    'interval_var': 10,                 # interval to save trainable network variables in original format
+    'interval_persist':1000             # interval of persistent saving
 }
 param_default={    # Wang 2018 parameters
     'n_cells_lstm' : 48,                  # number of cells in LSTM-RNN network
