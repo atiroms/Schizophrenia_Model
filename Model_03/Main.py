@@ -35,8 +35,8 @@ param_basic={
     'agent': 'A2C',
     'environment' : 'Two_Armed_Bandit',
 
-    #'episode_stop' : 50000,
-    'episode_stop' : 100,
+    'episode_stop' : 50000,
+    #'episode_stop' : 100,
 
     'interval_summary':1,               # interval to save simulation summary in original format
     #'interval_summary':100,  
@@ -46,8 +46,8 @@ param_basic={
     'interval_activity':1,              # interval to save all activity of an episode
     #'interval_activity':100,
     'interval_var': 10,                 # interval to save trainable network variables in original format
-    #'interval_persist':1000             # interval of persistent saving
-    'interval_persist':20
+    'interval_persist':1000             # interval of persistent saving
+    #'interval_persist':20
 }
 param_default={    # Wang 2018 parameters
     'n_cells_lstm' : 48,                  # number of cells in LSTM-RNN network
