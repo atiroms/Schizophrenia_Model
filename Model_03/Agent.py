@@ -95,7 +95,7 @@ class A2C_Agent():
         advantages = rewards + self.param.gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantages = self.discount(advantages,self.param.gamma)
 
-        rnn_state = self.local_AC.state_init
+        rnn_state = self.local_AC.state_init    # array of zeros defined in Network
         feed_dict = {
             self.local_AC.target_v:discounted_rewards,
             self.local_AC.prev_rewards:np.vstack(prev_rewards),
@@ -268,4 +268,3 @@ class A2C_Agent():
                     break
 
                 cnt_episode_local += 1        # add to local counter in all agents
-

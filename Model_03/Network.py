@@ -107,4 +107,3 @@ class LSTM_RNN_Network():
                 # Apply local gradients to master network
                 master_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'master')
                 self.apply_grads = trainer.apply_gradients(zip(grads,master_vars))
-                
