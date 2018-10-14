@@ -28,7 +28,7 @@ param_basic={
     'load_model' : False,
     'path_load' : './saved_data/20180917_011631',
 
-    'path_save_master' : './saved_data',
+    'path_save_master' : '/media/atiroms/MORITA_HDD3/MachineLearning/Schizophrenia_Model/saved_data',
 
     'n_agents' : 1,                       # number of agents that acts in parallel
 
