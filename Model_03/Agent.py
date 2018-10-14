@@ -86,9 +86,7 @@ class A2C_Agent():
         
         self.pr = prev_rewards
         self.pa = prev_actions
-        # Here we take the rewards and values from the episode_buffer, and use them to 
-        # generate the advantage and discounted returns. 
-        # The advantage function uses "Generalized Advantage Estimation"
+        # The advantage function according to "Generalized Advantage Estimation"
         self.rewards_plus = np.asarray(rewards.tolist() + [self.param.bootstrap_value])
         discounted_rewards = self.discount(self.rewards_plus,self.param.gamma)[:-1]
         self.value_plus = np.asarray(values.tolist() + [self.param.bootstrap_value])
