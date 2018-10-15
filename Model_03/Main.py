@@ -30,7 +30,7 @@ param_basic={
 
     #'path_save_master' : ['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data','C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data'],
     'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
-    
+
     'n_agents' : 1,                       # number of agents that acts in parallel
 
     'agent': 'A2C',
