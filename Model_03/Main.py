@@ -40,7 +40,7 @@ param_basic={
     #'episode_stop' : 100,
 
     'interval_summary':1,               # interval to save simulation summary in original format
-    #'interval_summary':100,  
+    #'interval_summary':100,
     'interval_ckpt': 1000,              # interval to save network parameters in tf default format
     #'interval_pic': 100,
     'interval_pic': 0,                  # interval to save task pictures
@@ -123,7 +123,7 @@ class Parameters():
             self.add_item(param_Wang2018_satatevalue)
         else:
             raise ValueError('Undefined parameter set name: ' + self.param_set + '.')
-    
+
     def add_item(self,dictionary):
         for key,value in dictionary.items():
             setattr(self,key,value)
@@ -182,7 +182,7 @@ class Run():
             for i in range(self.param.n_agents):
                 self.agents.append(A2C_Agent(i,self.param,Two_Armed_Bandit(self.param.bandit_difficulty),
                                             self.trainer,self.saver,self.episode_global))
-            
+
         # Run agents
         #config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
         config=tf.ConfigProto(allow_soft_placement=True)
@@ -239,7 +239,7 @@ class BatchRun():
                         self.batch_table.loc[batch_count,param['name']] = np.random.uniform(low=param['min'],high=param['max'])
                 else:
                     raise ValueError('Incorrect batch parameter type.')
-            
+
             param_id_level=self.n_param-1
             flag_break=0
             while flag_break < 1:
@@ -278,7 +278,7 @@ class BatchRun():
             self.batch_table.loc[i,'done']=True
             self.save_batch_table()
         print('Finished batch calculation.')
-        
+
     def save_batch_table(self):
         hdf=pd.HDFStore(self.path_save_batch+'/batch_table.h5')
         hdf.put('batch_table',self.batch_table,format='table',append=False,data_columns=True)
