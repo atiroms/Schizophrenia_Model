@@ -28,26 +28,28 @@ param_basic={
     'load_model' : False,
     'path_load' : './saved_data/20180917_011631',
 
-    'path_save_master' : './saved_data',
+    'path_save_master' : ['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data',
+                          'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data'],
+    #'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
 
     'n_agents' : 1,                       # number of agents that acts in parallel
 
     'agent': 'A2C',
     'environment' : 'Two_Armed_Bandit',
 
-    #'episode_stop' : 50000,
-    'episode_stop' : 100,
+    'episode_stop' : 50000,
+    #'episode_stop' : 100,
 
     'interval_summary':1,               # interval to save simulation summary in original format
-    #'interval_summary':100,  
+    #'interval_summary':100,
     'interval_ckpt': 1000,              # interval to save network parameters in tf default format
     #'interval_pic': 100,
     'interval_pic': 0,                  # interval to save task pictures
     'interval_activity':1,              # interval to save all activity of an episode
     #'interval_activity':100,
     'interval_var': 10,                 # interval to save trainable network variables in original format
-    #'interval_persist':1000             # interval of persistent saving
-    'interval_persist':20
+    'interval_persist':1000             # interval of persistent saving
+    #'interval_persist':20
 }
 param_default={    # Wang 2018 parameters
     'n_cells_lstm' : 48,                  # number of cells in LSTM-RNN network
@@ -74,8 +76,9 @@ param_Wang2018_satatevalue={
 }
 
 param_batch=[
-    {'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}
-    #{'name':'dummy_counter', 'n':5, 'type':'parametric', 'method':'grid', 'min':0,'max':4}
+    #{'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}
+    {'name': 'learning_rate', 'n':10, 'type':'parametric','method':'grid','min':0.0057,'max':0.0102},
+    {'name':'dummy_counter', 'n':2, 'type':'parametric', 'method':'grid', 'min':0,'max':1}
     #{'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
     #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']},
     #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
@@ -121,7 +124,7 @@ class Parameters():
             self.add_item(param_Wang2018_satatevalue)
         else:
             raise ValueError('Undefined parameter set name: ' + self.param_set + '.')
-    
+
     def add_item(self,dictionary):
         for key,value in dictionary.items():
             setattr(self,key,value)
@@ -139,7 +142,15 @@ class Run():
 
         # Timestamping directory name
         datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
-        path_save=self.param.path_save_master+'/'+datetime_start
+
+        for i in range(len(self.param.path_save_master)):
+            if os.path.exists(self.param.path_save_master[i]):
+                path_save=self.param.path_save_master[i]+'/'+datetime_start
+                break
+            elif i==len(self.param.path_save_master)-1:
+                raise ValueError('Save folder does not exist.')
+
+        #path_save=self.param.path_save_master+'/'+datetime_start
         self.param.add_item({'datetime_start':datetime_start, 'path_save':path_save})
 
         if not os.path.exists(path_save):
@@ -172,7 +183,7 @@ class Run():
             for i in range(self.param.n_agents):
                 self.agents.append(A2C_Agent(i,self.param,Two_Armed_Bandit(self.param.bandit_difficulty),
                                             self.trainer,self.saver,self.episode_global))
-            
+
         # Run agents
         #config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
         config=tf.ConfigProto(allow_soft_placement=True)
@@ -229,7 +240,7 @@ class BatchRun():
                         self.batch_table.loc[batch_count,param['name']] = np.random.uniform(low=param['min'],high=param['max'])
                 else:
                     raise ValueError('Incorrect batch parameter type.')
-            
+
             param_id_level=self.n_param-1
             flag_break=0
             while flag_break < 1:
@@ -268,11 +279,10 @@ class BatchRun():
             self.batch_table.loc[i,'done']=True
             self.save_batch_table()
         print('Finished batch calculation.')
-        
+
     def save_batch_table(self):
         hdf=pd.HDFStore(self.path_save_batch+'/batch_table.h5')
         hdf.put('batch_table',self.batch_table,format='table',append=False,data_columns=True)
         hdf.close()
-
 
 print('End of file.')

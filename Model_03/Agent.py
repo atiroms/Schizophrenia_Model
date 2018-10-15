@@ -86,16 +86,14 @@ class A2C_Agent():
         
         self.pr = prev_rewards
         self.pa = prev_actions
-        # Here we take the rewards and values from the episode_buffer, and use them to 
-        # generate the advantage and discounted returns. 
-        # The advantage function uses "Generalized Advantage Estimation"
+        # The advantage function according to "Generalized Advantage Estimation"
         self.rewards_plus = np.asarray(rewards.tolist() + [self.param.bootstrap_value])
         discounted_rewards = self.discount(self.rewards_plus,self.param.gamma)[:-1]
         self.value_plus = np.asarray(values.tolist() + [self.param.bootstrap_value])
         advantages = rewards + self.param.gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantages = self.discount(advantages,self.param.gamma)
 
-        rnn_state = self.local_AC.state_init
+        rnn_state = self.local_AC.state_init    # array of zeros defined in Network
         feed_dict = {
             self.local_AC.target_v:discounted_rewards,
             self.local_AC.prev_rewards:np.vstack(prev_rewards),
@@ -268,4 +266,3 @@ class A2C_Agent():
                     break
 
                 cnt_episode_local += 1        # add to local counter in all agents
-
