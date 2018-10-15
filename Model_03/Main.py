@@ -28,8 +28,8 @@ param_basic={
     'load_model' : False,
     'path_load' : './saved_data/20180917_011631',
 
-    #'path_save_master' : ['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data','C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data'],
-    'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
+    'path_save_master' : ['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data','C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data'],
+    #'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
 
     'n_agents' : 1,                       # number of agents that acts in parallel
 
@@ -149,7 +149,7 @@ class Run():
             elif i==len(self.param.path_save_master)-1:
                 raise ValueError('Save folder does not exist.')
 
-        path_save=self.param.path_save_master+'/'+datetime_start
+        #path_save=self.param.path_save_master+'/'+datetime_start
         self.param.add_item({'datetime_start':datetime_start, 'path_save':path_save})
 
         if not os.path.exists(path_save):
