@@ -28,7 +28,8 @@ param_basic={
     'load_model' : False,
     'path_load' : './saved_data/20180917_011631',
 
-    'path_save_master' : ['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data','C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data'],
+    'path_save_master' : ['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data',
+                          'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data'],
     #'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
 
     'n_agents' : 1,                       # number of agents that acts in parallel
@@ -283,6 +284,5 @@ class BatchRun():
         hdf=pd.HDFStore(self.path_save_batch+'/batch_table.h5')
         hdf.put('batch_table',self.batch_table,format='table',append=False,data_columns=True)
         hdf.close()
-
 
 print('End of file.')
