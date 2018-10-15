@@ -28,8 +28,9 @@ param_basic={
     'load_model' : False,
     'path_load' : './saved_data/20180917_011631',
 
-    'path_save_master' : '/media/atiroms/MORITA_HDD3/MachineLearning/Schizophrenia_Model/saved_data',
-
+    #'path_save_master' : ['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data','C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data'],
+    'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
+    
     'n_agents' : 1,                       # number of agents that acts in parallel
 
     'agent': 'A2C',
@@ -140,6 +141,14 @@ class Run():
 
         # Timestamping directory name
         datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
+
+        for i in range(len(self.param.path_save_master)):
+            if os.path.exists(self.param.path_save_master[i]):
+                path_save=self.param.path_save_master[i]+'/'+datetime_start
+                break
+            elif i==len(self.param.path_save_master)-1:
+                raise ValueError('Save folder does not exist.')
+
         path_save=self.param.path_save_master+'/'+datetime_start
         self.param.add_item({'datetime_start':datetime_start, 'path_save':path_save})
 
