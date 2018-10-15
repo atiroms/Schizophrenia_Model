@@ -20,9 +20,9 @@ from PIL import ImageFont
 ###################################
 
 class Two_Armed_Bandit():
-    def __init__(self,difficulty):
+    def __init__(self,config):
         self.n_actions = 2
-        self.difficulty = difficulty
+        self.config = config
         #self.reset()
         
     def set_restless_prob(self):    # sample from random walk list
@@ -30,24 +30,24 @@ class Two_Armed_Bandit():
         
     def reset(self):
         self.timestep = 0
-        if self.difficulty == "restless":       # bandit probability random-walks within an episode
+        if self.config == "restless":       # bandit probability random-walks within an episode
             variance = np.random.uniform(0,.5)  # degree of random walk
             self.restless_list = np.cumsum(np.random.uniform(-variance,variance,(150,1)))   # calculation of random walk
             self.restless_list = (self.restless_list - np.min(self.restless_list)) / (np.max(self.restless_list - np.min(self.restless_list))) 
             self.set_restless_prob()
-        if self.difficulty == "easy": bandit_prob = np.random.choice([0.9,0.1])
-        if self.difficulty == "medium": bandit_prob = np.random.choice([0.75,0.25])
-        if self.difficulty == "hard": bandit_prob = np.random.choice([0.6,0.4])
-        if self.difficulty == "uniform": bandit_prob = np.random.uniform()
-        if self.difficulty == "independent": self.bandit = np.random.uniform(size=2)
+        if self.config == "easy": bandit_prob = np.random.choice([0.9,0.1])
+        if self.config == "medium": bandit_prob = np.random.choice([0.75,0.25])
+        if self.config == "hard": bandit_prob = np.random.choice([0.6,0.4])
+        if self.config == "uniform": bandit_prob = np.random.uniform()
+        if self.config == "independent": self.bandit = np.random.uniform(size=2)
 
-        if self.difficulty != "restless" and self.difficulty != "independent":
+        if self.config != "restless" and self.config != "independent":
             self.bandit = np.array([bandit_prob,1 - bandit_prob])
         return self.bandit
         
     def step(self,action):
         #Get a random number.
-        if self.difficulty == "restless": self.set_restless_prob()  # sample from random walk list
+        if self.config == "restless": self.set_restless_prob()  # sample from random walk list
         timestep = self.timestep
         self.timestep += 1
         bandit = self.bandit[action]
@@ -91,3 +91,53 @@ class Two_Armed_Bandit():
             return x.astype(np.uint8)
         clip = mpy.VideoClip(make_frame, duration=duration)
         clip.write_gif(filename, fps = len(images) / duration, verbose=False, progress_bar=False)
+
+
+############################################
+# ENVIRONMENT OF DUAL ASSIGNMENT WITH HOLD #
+############################################
+
+class Dual_Assignment_with_Hold():
+    def __init__(self,config):
+        self.n_actions=2
+        self.config=config
+    
+    def reset(self):
+        self.timestep = 0
+        if self.config=='uniform':
+            bandit_prob=np.random.uniform(low=0.0,high=0.5)
+        elif self.config=='heldout':
+            bandit_prob=np.random.uniform(low=0.0,high=0.3)
+            if bandit_prob>0.2:
+                bandit_prob+=0.2
+            elif bandit_prob>0.1:
+                bandit_prob+=0.1
+        else:
+            raise ValueError('Undefined environment configuration: ' + self.config + '.')
+        self.bandit = np.array([bandit_prob, 0.5-bandit_prob])
+
+        self.timestep_stop=round(np.random.uniform(low=50,high=100))
+        self.timestep_unchosen=np.array([0, 0],dtype=np.int16)
+
+        return self.bandit
+
+    def step(self,action):
+        timestep=self.timestep
+        self.timestep+=1
+        bandit=self.bandit[action]
+        bandit=1-(1-bandit)**self.timestep_unchosen[action]
+
+        self.timestep_unchosen+=np.array([1, 1],dtype=np.int16)
+        self.timestep_unchosen[action]=0
+
+        result = np.random.uniform()
+        if result < bandit:
+            reward = 1
+        else:
+            reward = 0
+        if self.timestep > self.timestep_stop-1: 
+            done = True
+        else: 
+            done = False
+
+        return reward,done,timestep

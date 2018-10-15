@@ -16,7 +16,8 @@
 ##############
 
 param_basic={
-    'param_set': 'Wang2018',
+    #'param_set': 'Wang2018',
+    'param_set':  'exp1',
     #'param_set' : 'awjuliani',
     #'param_set' : 'Wang2018_fast',
     #'param_set' : 'Wang2018_statevalue',
@@ -35,7 +36,6 @@ param_basic={
     'n_agents' : 1,                       # number of agents that acts in parallel
 
     'agent': 'A2C',
-    'environment' : 'Two_Armed_Bandit',
 
     'episode_stop' : 50000,
     #'episode_stop' : 100,
@@ -54,7 +54,8 @@ param_basic={
 param_default={    # Wang 2018 parameters
     'n_cells_lstm' : 48,                  # number of cells in LSTM-RNN network
     'bootstrap_value' : 0.0,
-    'bandit_difficulty' : 'uniform',      # select "independent" for independent bandit
+    'environment' : 'Two_Armed_Bandit',
+    'config_environment' : 'uniform',             # select "independent" for independent bandit
     'gamma' : .9,                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
     'optimizer' : 'RMSProp',              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
     'learning_rate' : 0.0007,             # Wang Nat Neurosci 2018
@@ -62,6 +63,12 @@ param_default={    # Wang 2018 parameters
     'cost_entropy' : 0.05,                # 0.05 in Wang 2018 and awjuliani/meta-RL
     'dummy_counter' : 0                   # dummy counter used for batch calculation
 }
+
+param_exp1={
+    'environment' : 'Dual_Assignment_with_Hold',
+    'gamma' : 0.75
+}
+
 param_awjuliani={   # awjuliani/metaRL parameters
     'gamma' : .8,                         # 0.8 in awjuliani/meta-RL
     'optimizer' : 'Adam',
@@ -113,6 +120,9 @@ class Parameters():
         self.add_item(param_basic)
         if self.param_set == 'Wang2018':
             self.add_item(param_default)
+        elif self.param_set == 'exp1':
+            self.add_item(param_default)
+            self.add_item(param_exp1)
         elif self.param_set == 'awjuliani':
             self.add_item(param_default)
             self.add_item(param_awjuliani)
@@ -173,16 +183,20 @@ class Run():
                 self.trainer = tf.train.AdamOptimizer(learning_rate=self.param.learning_rate)
             elif self.param.optimizer == "RMSProp":
                 self.trainer = tf.train.RMSPropOptimizer(learning_rate=self.param.learning_rate)
+            if self.param.environment == 'Two_Armed_Bandit':
+                agent_alias=Two_Armed_Bandit
+            elif self.param.environment == 'Dual_Assignment_with_Hold':
+                agent_alias=Dual_Assignment_with_Hold
             self.master_network = LSTM_RNN_Network(self.param,
-                                                Two_Armed_Bandit(self.param.bandit_difficulty).n_actions,
+                                                agent_alias(self.param.config_environment).n_actions,
                                                 'master',None) # Generate master network
             #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
             self.saver = tf.train.Saver(max_to_keep=5)
             self.agents = []
             # Create A2C_Agent classes
             for i in range(self.param.n_agents):
-                self.agents.append(A2C_Agent(i,self.param,Two_Armed_Bandit(self.param.bandit_difficulty),
-                                            self.trainer,self.saver,self.episode_global))
+                self.agents.append(A2C_Agent(i,self.param,agent_alias(self.param.config_environment),
+                                             self.trainer,self.saver,self.episode_global))
 
         # Run agents
         #config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
