@@ -37,7 +37,8 @@ param_basic={
 
     'agent': 'A2C',
 
-    'episode_stop' : 50000,
+    #'episode_stop' : 50000,
+    'episode_stop' : 200000,
     #'episode_stop' : 100,
 
     'interval_summary':1,               # interval to save simulation summary in original format
@@ -63,12 +64,10 @@ param_default={    # Wang 2018 parameters
     'cost_entropy' : 0.05,                # 0.05 in Wang 2018 and awjuliani/meta-RL
     'dummy_counter' : 0                   # dummy counter used for batch calculation
 }
-
 param_exp1={
     'environment' : 'Dual_Assignment_with_Hold',
     'gamma' : 0.75
 }
-
 param_awjuliani={   # awjuliani/metaRL parameters
     'gamma' : .8,                         # 0.8 in awjuliani/meta-RL
     'optimizer' : 'Adam',
