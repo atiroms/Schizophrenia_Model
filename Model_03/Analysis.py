@@ -9,34 +9,32 @@
 # PARAMETERS #
 ##############
 
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180914_000352'   # summary saved every 50 episodes
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180918_211807'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180921_011111'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180923_114142'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_235841'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180926_002716'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180928_233909'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180929_001701'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20181002_010133'
+path_data_master=['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data',
+                  'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data']
 
-#data_path = 'C:/Users/atiro/Dropbox/Schizophrenia_Model/saved_data/20180928_233909'
-data_path = 'C:/Users/atiro/GitHub/Schizophrenia_Model/Model_03/saved_data/20181010_054352'
+#path_data = '20180914_000352'   # summary saved every 50 episodes
+#path_data = '20180918_211807'
+#path_data = '20180920_130605'
+#path_data = '20180921_011111'
+#path_data = '20180923_114142'
+#path_data = '20180924_175630'
+#path_data = '20180924_235841'
+#path_data = '20180926_002716'
+#path_data = '20180928_233909'
+#path_data = '20180929_001701'
+#path_data = '20181002_004726'
+#path_data = '20181002_010133'
+#path_data = '20181010_054352'
+path_data = '20181015_171743'
 
-# data path for activity analysis
-#data_path = './saved_data/20180920_130605'
-
-# data path for variables analysis
-#data_path='/home/atiroms/Documents/GitHub/Schizophrenia_Model/Model_03/saved_data/20181002_004726'
-
-data_paths=[
-    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180918_211807',
-    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180921_011111',
-    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180923_114142',
-    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_175630',
-    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180924_235841',
-    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180926_002716',
-    '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180928_233909',
+paths_data=[
+    '20180918_211807',
+    '20180921_011111',
+    '20180923_114142',
+    '20180924_175630',
+    '20180924_235841',
+    '20180926_002716',
+    '20180928_233909',
 ]
 
 
@@ -55,19 +53,31 @@ import os
 import math
 
 
+############################
+# DATA FOLDER CONFIRMATION #
+############################
+
+for i in range(len(path_data_master)):
+    if os.path.exists(path_data_master[i]):
+        path_data=path_data_master[i]+'/'+path_data
+        break
+    elif i==len(path_data_master)-1:
+        raise ValueError('Save folder does not exist.')
+
+
 ##############################
 # DATA EXTRACTION AND SAVING #
 ##############################
 
 class Extract_Checkpoint():
-    def __init__(self,data_path=data_path):
+    def __init__(self,path_data=path_data):
         # Collect summary files
-        self.data_path=data_path + '/summary'
-        self.data_paths = glob.glob(os.path.join(self.data_path, '*', 'event*'))
+        self.path_data=path_data + '/summary'
+        self.paths_data = glob.glob(os.path.join(self.path_data, '*', 'event*'))
 
         # Extract data from summary files
         print('Starting data extraction.')
-        for p in self.data_paths:
+        for p in self.paths_data:
             count=0
             for e in tf.train.summary_iterator(p):
                 print('Extracting episode ' + str(int(e.step)), end='/r')
@@ -90,7 +100,7 @@ class Extract_Checkpoint():
         # '/' cannot be used as column names when stored in hdf5, so column names are stored separately
         colnames=pd.Series(self.output.columns.values,index=('col'+str(i) for i in range(self.output.shape[1])))
         self.output.columns=list('col'+str(i) for i in range(self.output.shape[1]))
-        hdf=pd.HDFStore(self.data_path+'/summary.h5')
+        hdf=pd.HDFStore(self.path_data+'/summary.h5')
         hdf.put('summary',self.output,format='table',append=False,data_columns=True)
         hdf.put('colnames',colnames)
         hdf.close()
@@ -103,39 +113,39 @@ class Extract_Checkpoint():
 #####################
 
 class Load_Summary():
-    def __init__(self,data_path=data_path):
+    def __init__(self,path_data=path_data):
         print('Starting hdf5 file loading.')
-        self.data_path=data_path + '/summary'
-        hdf = pd.HDFStore(self.data_path+'/summary.h5')
+        self.path_data=path_data + '/summary'
+        hdf = pd.HDFStore(self.path_data+'/summary.h5')
         self.output = pd.DataFrame(hdf['summary'])
         hdf.close()
         print('Finished hdf5 file loading.')
 
 class Load_Summary_Old():
-    def __init__(self,data_path=data_path):
+    def __init__(self,path_data=path_data):
         print('Starting hdf5 file loading.')
-        self.data_path=data_path + '/summary'
-        hdf = pd.HDFStore(self.data_path+'/summary.h5')
+        self.path_data=path_data + '/summary'
+        hdf = pd.HDFStore(self.path_data+'/summary.h5')
         self.output = pd.DataFrame(hdf['summary'])
         self.output.columns=hdf['colnames'].tolist()
         hdf.close()
         print('Finished hdf5 file loading.')
 
 class Load_Activity():
-    def __init__(self,data_path=data_path):
+    def __init__(self,path_data=path_data):
         print('Starting hdf5 file loading.')
-        self.data_path=data_path + '/activity'
-        hdf = pd.HDFStore(self.data_path+'/activity.h5')
+        self.path_data=path_data + '/activity'
+        hdf = pd.HDFStore(self.path_data+'/activity.h5')
         self.output = pd.DataFrame(hdf['activity'])
         hdf.close()
         print('Finished hdf5 file loading.')
 
 
 class Load_Variable():
-    def __init__(self,data_path=data_path):
+    def __init__(self,path_data=path_data):
         print('Starting hdf5 file loading.')
-        self.data_path=data_path + '/model'
-        hdf = pd.HDFStore(self.data_path+'/variable.h5')
+        self.path_data=path_data + '/model'
+        hdf = pd.HDFStore(self.path_data+'/variable.h5')
         self.output = pd.DataFrame(hdf['variable'])
         hdf.close()
         print('Finished hdf5 file loading.')
@@ -147,9 +157,9 @@ class Load_Variable():
 #################
 
 class Visualize():
-    def __init__(self,dataframe,data_path=data_path,key='Performance/Reward'):
+    def __init__(self,dataframe,path_data=path_data,key='reward'):
         self.df=dataframe
-        self.data_path=data_path
+        self.path_data=path_data
         self.key=key
         #cf.set_config_file(offline=True, theme="white", offline_show_link=False)
         #cf.go_offline()
@@ -158,11 +168,11 @@ class Visualize():
         #df.iplot(kind="scatter", mode='markers', x='Simulation/Global Episode Count', y='Performance/Reward')
 
         fig = self.df.iplot(
-            kind="scatter", asFigure=True,x='Simulation/Global Episode Count', y='Performance/Reward',
+            kind="scatter", asFigure=True,x='episode', y=key,
             title='Reward - Episode', xTitle='Episode', yTitle='Reward',
             colors=['blue'])
         #fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Perf/Reward')
-        py.offline.plot(fig, filename=self.data_path + '/Reward.html')
+        py.offline.plot(fig, filename=self.path_data + '/Reward.html')
         print('Generated graph.')
 
 
@@ -191,12 +201,12 @@ class AveEpisode():
 ##############################
 
 class RewardAverageGraphBatch():
-    def __init__(self,data_paths=data_paths):
-        for p in data_paths:
+    def __init__(self,paths_data=paths_data):
+        for p in paths_data:
             print('Calculating ' + p + '.')
-            df=Load_Summary(data_path=p).output
+            df=Load_Summary(path_data=p).output
             ave=AveEpisode(dataframe=df,interval=100).output
-            vis=Visualize(dataframe=ave,data_path=p)
+            vis=Visualize(dataframe=ave,path_data=p)
         print('Finished batch calculation.')
 
 
