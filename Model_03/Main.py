@@ -33,7 +33,7 @@ param_basic={
                           'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data'],
     #'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
 
-    'n_agents' : 1,                       # number of agents that acts in parallel
+    'n_agents' : 1,                       # number of agents that act in parallel
 
     'agent': 'A2C',
 
@@ -56,7 +56,7 @@ param_default={    # Wang 2018 parameters
     'n_cells_lstm' : 48,                  # number of cells in LSTM-RNN network
     'bootstrap_value' : 0.0,
     'environment' : 'Two_Armed_Bandit',
-    'config_environment' : 'uniform',             # select "independent" for independent bandit
+    'config_environment' : 'uniform',     # select "independent" for independent bandit
     'gamma' : .9,                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
     'optimizer' : 'RMSProp',              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
     'learning_rate' : 0.0007,             # Wang Nat Neurosci 2018
@@ -66,6 +66,7 @@ param_default={    # Wang 2018 parameters
 }
 param_exp1={
     'environment' : 'Dual_Assignment_with_Hold',
+    'config_environment' : 'heldout',       # select 'uniform' or 'heldout'
     'gamma' : 0.75
 }
 param_awjuliani={   # awjuliani/metaRL parameters
