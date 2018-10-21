@@ -86,14 +86,16 @@ class A2C_Agent():
         
         self.pr = prev_rewards
         self.pa = prev_actions
-        # The advantage function according to "Generalized Advantage Estimation"
+        # Here we take the rewards and values from the episode_buffer, and use them to 
+        # generate the advantage and discounted returns. 
+        # The advantage function uses "Generalized Advantage Estimation"
         self.rewards_plus = np.asarray(rewards.tolist() + [self.param.bootstrap_value])
         discounted_rewards = self.discount(self.rewards_plus,self.param.gamma)[:-1]
         self.value_plus = np.asarray(values.tolist() + [self.param.bootstrap_value])
         advantages = rewards + self.param.gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantages = self.discount(advantages,self.param.gamma)
 
-        rnn_state = self.local_AC.state_init    # array of zeros defined in Network
+        rnn_state = self.local_AC.state_init
         feed_dict = {
             self.local_AC.target_v:discounted_rewards,
             self.local_AC.prev_rewards:np.vstack(prev_rewards),
@@ -130,7 +132,7 @@ class A2C_Agent():
                 sess.run(self.increment)                                # add to global episode counter
                 print("Running global episode: " + str(cnt_episode_global) + ", " + self.name + " local episode: " + str(cnt_episode_local)+ "          ", end="\r")
                 t_start = time.time()
-                sess.run(self.update_target_graph('master',self.name))                        # copy master graph to local
+                sess.run(self.update_target_graph(self.name,'main'))                        # copy master graph to local
                 episode_buffer = []
                 episode_values = []
                 #episode_frames = []
@@ -266,3 +268,4 @@ class A2C_Agent():
                     break
 
                 cnt_episode_local += 1        # add to local counter in all agents
+
