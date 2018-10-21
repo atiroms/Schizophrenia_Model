@@ -18,8 +18,7 @@
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180926_002716/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary'
 #data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20180929_001701/summary'
-#data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20181002_010133/summary'
-data_path = 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/temp/saved_data/20181018_160924/summary'
+data_path = '/home/atiroms/Documents/Dropbox/Schizophrenia_Model/saved_data/20181002_010133/summary'
 
 #data_path = 'C:/Users/atiro/Dropbox/Schizophrenia_Model/saved_data/20180928_233909/summary'
 
@@ -64,7 +63,7 @@ class Extract():
         for p in self.data_paths:
             count=0
             for e in tf.train.summary_iterator(p):
-                print('Extracting episode ' + str(int(e.step)), end='/r')
+                print('Extracting episode ' + str(int(e.step)), end='\r')
                 if count==1:
                 #if count==0:
                     colnames=['Simulation/Global Episode Count']+[v.tag for v in e.summary.value]
@@ -76,7 +75,7 @@ class Extract():
                     self.output.loc[count]=data
                 count+=1
 
-        print('/n')
+        print('\n')
         print('Finished data extraction. ' + str(count) + ' timepoints.')
         print('Saving extracted data.')
 

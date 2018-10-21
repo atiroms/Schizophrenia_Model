@@ -625,8 +625,4 @@ class BatchRun():
         hdf.close()
 
 
-run=Run()
-run.run()
-
-
 print('End of file.')
