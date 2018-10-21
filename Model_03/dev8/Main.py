@@ -36,7 +36,8 @@ param_basic={
     'environment' : 'Two_Armed_Bandit',
 
     #'episode_stop' : 50000,
-    'episode_stop' : 20,
+    #'episode_stop' : 20,
+    'episode_stop' : 100,
 
     'interval_ckpt': 1000,              # interval to save network parameters in tf default format
     #'interval_pic': 100,
@@ -624,5 +625,7 @@ class BatchRun():
         hdf.put('batch_table',self.batch_table,format='table',append=False,data_columns=True)
         hdf.close()
 
+run=Run()
+run.run()
 
 print('End of file.')

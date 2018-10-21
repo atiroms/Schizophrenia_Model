@@ -274,5 +274,8 @@ class BatchRun():
         hdf.put('batch_table',self.batch_table,format='table',append=False,data_columns=True)
         hdf.close()
 
+run=Run()
+run.run()
+
 
 print('End of file.')
