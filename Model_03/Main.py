@@ -39,17 +39,17 @@ param_basic={
 
     #'episode_stop' : 50000,
     #'episode_stop' : 200000,
-    'episode_stop' : 1000,
+    'episode_stop' : 100,
 
     'interval_summary':1,               # interval to save simulation summary in original format
     #'interval_summary':100,
-    'interval_ckpt': 1000,              # interval to save network parameters in tf default format
+    'interval_ckpt': 100,              # interval to save network parameters in tf default format
     #'interval_pic': 100,
     'interval_pic': 0,                  # interval to save task pictures
     'interval_activity':1,              # interval to save all activity of an episode
     #'interval_activity':100,
     'interval_var': 10,                 # interval to save trainable network variables in original format
-    'interval_persist':1000             # interval of persistent saving
+    'interval_persist':100             # interval of persistent saving
     #'interval_persist':20
 }
 param_default={    # Wang 2018 parameters
@@ -298,4 +298,6 @@ class BatchRun():
         hdf.put('batch_table',self.batch_table,format='table',append=False,data_columns=True)
         hdf.close()
 
+run=Run()
+run.run()
 print('End of file.')

@@ -130,7 +130,7 @@ class A2C_Agent():
                 sess.run(self.increment)                                # add to global episode counter
                 print("Running global episode: " + str(cnt_episode_global) + ", " + self.name + " local episode: " + str(cnt_episode_local)+ "          ", end="\r")
                 t_start = time.time()
-                sess.run(self.update_target_graph(self.name,'main'))                        # copy master graph to local
+                sess.run(self.update_target_graph('main',self.name))                        # copy master graph to local
                 episode_buffer = []
                 episode_values = []
                 #episode_frames = []
