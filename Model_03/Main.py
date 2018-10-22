@@ -33,7 +33,7 @@ param_basic={
                           'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data'],
     #'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
 
-    'n_agents' : 1,                       # number of agents that acts in parallel
+    'n_agents' : 1,                       # number of agents that act in parallel
 
     'agent': 'A2C',
 
@@ -46,9 +46,10 @@ param_basic={
     'interval_ckpt': 1000,              # interval to save network parameters in tf default format
     #'interval_pic': 100,
     'interval_pic': 0,                  # interval to save task pictures
-    'interval_activity':1,              # interval to save all activity of an episode
-    #'interval_activity':100,
-    'interval_var': 10,                 # interval to save trainable network variables in original format
+    #'interval_activity':1,              # interval to save all activity of an episode
+    'interval_activity':0,
+    #'interval_var': 10,                 # interval to save trainable network variables in original format
+    'interval_var': 0,
     'interval_persist':1000             # interval of persistent saving
     #'interval_persist':20
 }
