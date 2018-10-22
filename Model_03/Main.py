@@ -50,8 +50,9 @@ param_basic={
     #'interval_activity':0,
     'interval_var': 10,                 # interval to save trainable network variables in original format
     #'interval_var': 0,
-    'interval_persist':1000             # interval of persistent saving
-    #'interval_persist':100
+    'interval_persist':1000,             # interval of persistent saving
+    #'interval_persist':100,
+    'interval_gc':100                   # interval of garbage collection
 }
 param_default={    # Wang 2018 parameters
     'n_cells_lstm' : 48,                  # number of cells in LSTM-RNN network

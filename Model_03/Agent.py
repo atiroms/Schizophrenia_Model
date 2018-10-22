@@ -86,9 +86,9 @@ class A2C_Agent():
                                                'timestep','action','reward','value'])
         for col in ['episode','action','id_agent','timestep']:
             self.df_activity.loc[:,col]=self.df_activity.loc[:,col].astype('int64')
-        n_gc=gc.collect()
+        #n_gc=gc.collect()
         #print('Garbage collction: ' + str(n_gc) + ' objects.')
-        gc.disable()
+        #gc.disable()
  
     def train(self,episode_buffer,sess):
         timesteps = episode_buffer[:,0]
@@ -109,7 +109,7 @@ class A2C_Agent():
 
         rnn_state = self.local_AC.state_init    # array of zeros defined in Network
         feed_dict = {
-            self.local_AC.target_v:discounted_rewards,
+            self.local_AC.value_target:discounted_rewards,
             self.local_AC.prev_rewards:np.vstack(prev_rewards),
             self.local_AC.prev_actions:prev_actions,
             self.local_AC.actions:actions,
@@ -117,21 +117,21 @@ class A2C_Agent():
             self.local_AC.advantages:advantages,
             self.local_AC.state_in[0]:rnn_state[0],
             self.local_AC.state_in[1]:rnn_state[1]}
-        t_l,v_l,p_l,e_l,g_n,v_n,_ = sess.run([
-            self.local_AC.loss,
-            self.local_AC.value_loss,
-            self.local_AC.policy_loss,
-            self.local_AC.entropy,
-            self.local_AC.grad_norms,
-            self.local_AC.var_norms,
+        l_t,l_v,l_p,l_e,n_g,n_v,_ = sess.run([
+            self.local_AC.loss_total,
+            self.local_AC.loss_value,
+            self.local_AC.loss_policy,
+            self.local_AC.loss_entropy,
+            self.local_AC.norms_grad,
+            self.local_AC.norms_var,
             self.local_AC.apply_grads],
             feed_dict=feed_dict)
-        t_l /= episode_buffer.shape[0]
-        v_l /= episode_buffer.shape[0]
-        p_l /= episode_buffer.shape[0]
-        e_l /= episode_buffer.shape[0] 
+        l_t /= episode_buffer.shape[0]
+        l_v /= episode_buffer.shape[0]
+        l_p /= episode_buffer.shape[0]
+        l_e /= episode_buffer.shape[0] 
 
-        return t_l, v_l, p_l, e_l, g_n, v_n
+        return l_t, l_v, l_p, l_e, n_g, n_v
         
     def work(self,sess,coord):
         cnt_episode_global = sess.run(self.episode_global)           # refer to global episode counter over all agents
@@ -199,7 +199,7 @@ class A2C_Agent():
                 
                 # train the network using the experience buffer at the end of the episode.
                 if self.param.train == True:
-                    t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess)
+                    l_t,l_v,l_p,l_e,n_g,n_v = self.train(episode_buffer,sess)
 
                 t_train=time.time()-t_each_start
                 t_each_start=time.time()
@@ -214,9 +214,9 @@ class A2C_Agent():
                                                                  'step_episode','prob_arm0','prob_arm1',
                                                                  'time_calc'])
                         if self.param.train == True:
-                            df_summary_episode=df_summary_episode.assign(loss_total=t_l,loss_value=v_l,
-                                                                         loss_policy=p_l,loss_entropy=e_l,
-                                                                         norm_gradient=g_n,norm_variable=v_n)
+                            df_summary_episode=df_summary_episode.assign(loss_total=l_t,loss_value=l_v,
+                                                                         loss_policy=l_p,loss_entropy=l_e,
+                                                                         norm_gradient=n_g,norm_variable=n_v)
                         for col in ['episode','step_episode']:
                             df_summary_episode.loc[:,col]=df_summary_episode.loc[:,col].astype('int64')
                         
@@ -225,8 +225,8 @@ class A2C_Agent():
                 # Save model trainable variables in dataframe
                 if self.param.interval_var>0:
                     if cnt_episode_global % self.param.interval_var == 0 and self.param.train == True:
-                        master_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'master')
-                        val = sess.run(master_vars)                      
+                        vars_master = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'master')
+                        val = sess.run(vars_master)                      
                         df_var_episode=np.empty(shape=[0,])
                         for v in val:
                             df_var_episode=np.concatenate((df_var_episode,v.ravel()),axis=0)
@@ -245,7 +245,7 @@ class A2C_Agent():
                             df_activity_episode.loc[:,col]=df_activity_episode.loc[:,col].astype('int64')
                         self.df_activity=pd.concat([self.df_activity,df_activity_episode])
 
-                # Sersisitent saving of model summary, parameters and activity
+                # Persisitent saving of model summary, parameters and activity
                 if self.param.interval_persist>0:
                     if cnt_episode_global>0 and cnt_episode_global % self.param.interval_persist == 0:
                         hdf=pd.HDFStore(self.param.path_save+'/summary/summary.h5')
@@ -273,8 +273,15 @@ class A2C_Agent():
                         self.saver.save(sess,self.param.path_save+'/model/'+str(cnt_episode_global)+'.ckpt')
                         #print('Saved model parameters at global episode ' + str(cnt_episode_global) + '.                 ')
 
-                # Save episode summary in /summary folder
+                # garbage collection
+                if self.param.interval_gc>0:
+                    if cnt_episode_global % self.param.interval_gc == 0:
+                        n_gc=gc.collect()
+                        #print('Garbage collction: ' + str(n_gc) + ' objects.')
+                        gc.disable()
+
                 '''
+                # Save episode summary in /summary folder
                 summary_episode = tf.Summary()
                 summary_episode.value.add(tag="Performance/Reward", simple_value=float(np.sum(episode_reward)))
                 summary_episode.value.add(tag="Performance/Mean State-Action Value", simple_value=float(np.mean(episode_values)))
