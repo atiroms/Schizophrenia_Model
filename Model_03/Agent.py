@@ -13,6 +13,7 @@ import tensorflow as tf
 import scipy.signal
 import time
 import pandas as pd
+import gc
 from Network import *
 
 
@@ -38,10 +39,17 @@ class A2C_Agent():
         # Create the local copy of the network and the tensorflow op to copy master paramters to local network
         self.local_AC = LSTM_RNN_Network(self.param,self.n_actions,self.name,trainer)
         #self.update_local_ops = update_target_graph('master',self.name)
+        
+        from_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'master')
+        to_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, self.name)
+        self.ops_copy_graph = []
+        for from_var,to_var in zip(from_vars,to_vars):
+            self.ops_copy_graph.append(to_var.assign(from_var))
 
         self.init_df()
 
     # Used to set worker network parameters to those of global network.
+    '''
     def update_target_graph(self,from_scope,to_scope):
         from_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, from_scope)
         to_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, to_scope)
@@ -49,7 +57,10 @@ class A2C_Agent():
         op_holder = []
         for from_var,to_var in zip(from_vars,to_vars):
             op_holder.append(to_var.assign(from_var))
+        
+        print('graph vars: ' + str(len(op_holder)), end='\r')
         return op_holder
+    '''
 
     # Discounting function used to calculate discounted returns.
     def discount(self,x, gamma):
@@ -75,6 +86,9 @@ class A2C_Agent():
                                                'timestep','action','reward','value'])
         for col in ['episode','action','id_agent','timestep']:
             self.df_activity.loc[:,col]=self.df_activity.loc[:,col].astype('int64')
+        n_gc=gc.collect()
+        #print('Garbage collction: ' + str(n_gc) + ' objects.')
+        gc.disable()
  
     def train(self,episode_buffer,sess):
         timesteps = episode_buffer[:,0]
@@ -128,9 +142,17 @@ class A2C_Agent():
             while not coord.should_stop():                              # iterate over episodes
                 cnt_episode_global = sess.run(self.episode_global)   # refer to global episode counter over all agents
                 sess.run(self.increment)                                # add to global episode counter
-                print("Running global episode: " + str(cnt_episode_global) + ", " + self.name + " local episode: " + str(cnt_episode_local)+ "          ", end="\r")
+                #print("Running global episode: " + str(cnt_episode_global) + ", " + self.name + " local episode: " + str(cnt_episode_local)+ "          ", end="\r")
                 t_start = time.time()
-                sess.run(self.update_target_graph('master',self.name))                        # copy master graph to local
+
+                t_each_start = time.time()
+
+                #sess.run(self.update_target_graph('master',self.name))                        # copy master graph to local
+                sess.run(self.ops_copy_graph)
+
+                t_copy = time.time()-t_each_start
+                t_each_start=time.time()
+
                 episode_buffer = []
                 episode_values = []
                 #episode_frames = []
@@ -143,6 +165,9 @@ class A2C_Agent():
                 bandit = self.env.reset()                               # returns np.array of bandit probabilities
                 rnn_state = self.local_AC.state_init                    # returns zero array with LSTM cell size
                 
+                t_prepare=time.time()-t_each_start
+                t_each_start=time.time()
+
                 # act
                 while d == False:                                       # d is "done" flag returned from the environment
                     #Take an action using probabilities from policy network output.
@@ -167,11 +192,17 @@ class A2C_Agent():
                     agent_steps += 1
                     step_episode += 1
 
+                t_act=time.time()-t_each_start
+                t_each_start=time.time()
+
                 episode_buffer=np.array(episode_buffer)
                 
                 # train the network using the experience buffer at the end of the episode.
                 if self.param.train == True:
                     t_l,v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess)
+
+                t_train=time.time()-t_each_start
+                t_each_start=time.time()
 
                 # Save simulation summary in dataframe
                 if self.param.interval_summary>0:
@@ -261,6 +292,13 @@ class A2C_Agent():
                 self.summary_writer.add_summary(summary_episode, cnt_episode_global)
                 self.summary_writer.flush()
                 '''
+
+                t_save=time.time()-t_each_start
+
+                #print('Episode: ' + str(cnt_episode_global) + ', reward: ' + str(np.sum(episode_reward)) + ', calc time: ' + str(time.time()-t_start) + '               ', end='\r')
+                print('Episode: {}, Reward: {}, Calc time: {:.5f}           '.format(cnt_episode_global, np.sum(episode_reward), time.time()-t_start), end='\r')
+                #print('episode: ' + str(cnt_episode_global) + ', copy time: ' + str(t_copy) + ', prep time: ' + str(t_prepare) + ', act time: ' + str(t_act) + ', train time: ' + str(t_train) + ', save time: ' + str(t_save) + '.             ', end='\r')
+
                 if cnt_episode_global == self.param.episode_stop:
                     print('Reached maximum episode count: '+ str(cnt_episode_global) + '.                           ')
                     break
