@@ -46,12 +46,12 @@ param_basic={
     'interval_ckpt': 1000,              # interval to save network parameters in tf default format
     #'interval_pic': 100,
     'interval_pic': 0,                  # interval to save task pictures
-    #'interval_activity':1,              # interval to save all activity of an episode
-    'interval_activity':0,
-    #'interval_var': 10,                 # interval to save trainable network variables in original format
-    'interval_var': 0,
-    #'interval_persist':1000             # interval of persistent saving
-    'interval_persist':100
+    'interval_activity':1,              # interval to save all activity of an episode
+    #'interval_activity':0,
+    'interval_var': 10,                 # interval to save trainable network variables in original format
+    #'interval_var': 0,
+    'interval_persist':1000             # interval of persistent saving
+    #'interval_persist':100
 }
 param_default={    # Wang 2018 parameters
     'n_cells_lstm' : 48,                  # number of cells in LSTM-RNN network
@@ -173,7 +173,7 @@ class Run():
             json.dump(self.param.__dict__, fp, indent=1)
 
     def run(self):
-        print('Starting calculation: '+ self.param.datetime_start + '.')
+        print('Data saved in: '+ self.param.path_save + '.')
         tf.reset_default_graph()
         # Setup agents for multiple threading
         with tf.device(self.param.xpu):
@@ -221,7 +221,7 @@ class Run():
                     thread.start()
                     agent_threads.append(thread)
                 coord.join(agent_threads)
-        print('Finished calculation: '+ self.param.datetime_start + '.')
+        print('Finished ID: '+ self.param.datetime_start + '.')
 
 
 #############
