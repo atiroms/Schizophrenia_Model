@@ -68,7 +68,8 @@ param_default={    # Wang 2018 parameters
 }
 param_exp1={
     'environment' : 'Dual_Assignment_with_Hold',
-    'gamma' : 0.75
+    'gamma' : 0.75,
+    'config_environment': 'heldout'
 }
 param_awjuliani={   # awjuliani/metaRL parameters
     'gamma' : .8,                         # 0.8 in awjuliani/meta-RL
