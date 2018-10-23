@@ -30,7 +30,8 @@ param_basic={
     'path_load' : './saved_data/20180917_011631',
 
     'path_save_master' : ['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data',
-                          'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data'],
+                          'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
+                          '/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data'],
     #'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
 
     'n_agents' : 1,                       # number of agents that act in parallel
@@ -50,8 +51,9 @@ param_basic={
     #'interval_activity':0,
     'interval_var': 10,                 # interval to save trainable network variables in original format
     #'interval_var': 0,
-    'interval_persist':1000             # interval of persistent saving
-    #'interval_persist':100
+    #'interval_persist':1000,             # interval of persistent saving
+    'interval_persist':200,
+    'interval_gc':200                   # interval of garbage collection
 }
 param_default={    # Wang 2018 parameters
     'n_cells_lstm' : 48,                  # number of cells in LSTM-RNN network
@@ -67,7 +69,8 @@ param_default={    # Wang 2018 parameters
 }
 param_exp1={
     'environment' : 'Dual_Assignment_with_Hold',
-    'gamma' : 0.75
+    'gamma' : 0.75,
+    'config_environment': 'heldout'
 }
 param_awjuliani={   # awjuliani/metaRL parameters
     'gamma' : .8,                         # 0.8 in awjuliani/meta-RL
@@ -84,10 +87,11 @@ param_Wang2018_satatevalue={
 
 param_batch=[
     #{'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}
-    {'name': 'learning_rate', 'n':10, 'type':'parametric','method':'grid','min':0.0057,'max':0.0102},
-    {'name':'dummy_counter', 'n':2, 'type':'parametric', 'method':'grid', 'min':0,'max':1}
+    #{'name': 'learning_rate', 'n':10, 'type':'parametric','method':'grid','min':0.0057,'max':0.0102},
+    {'name': 'learning_rate', 'n':100, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
+    #{'name':'dummy_counter', 'n':2, 'type':'parametric', 'method':'grid', 'min':0,'max':1}
     #{'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
-    #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']},
+    {'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
     #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
 ]
 
