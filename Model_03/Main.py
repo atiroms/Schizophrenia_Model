@@ -30,7 +30,7 @@ param_basic={
     'path_load' : './saved_data/20180917_011631',
 
     'path_save_master' : ['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data',
-                          'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data'
+                          'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
                           '/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data'],
     #'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
 
