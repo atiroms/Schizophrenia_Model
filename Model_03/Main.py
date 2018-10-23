@@ -16,8 +16,8 @@
 ##############
 
 param_basic={
-    'param_set': 'Wang2018',
-    #'param_set':  'exp1',
+    #'param_set': 'Wang2018',
+    'param_set':  'exp1',
     #'param_set' : 'awjuliani',
     #'param_set' : 'Wang2018_fast',
     #'param_set' : 'Wang2018_statevalue',
@@ -38,8 +38,8 @@ param_basic={
 
     'agent': 'A2C',
 
-    'episode_stop' : 50000,
-    #'episode_stop' : 200000,
+    #'episode_stop' : 50000,
+    'episode_stop' : 200000,
     #'episode_stop' : 100,
 
     'interval_summary':1,               # interval to save simulation summary in original format
@@ -69,7 +69,8 @@ param_default={    # Wang 2018 parameters
 }
 param_exp1={
     'environment' : 'Dual_Assignment_with_Hold',
-    'gamma' : 0.75
+    'gamma' : 0.75,
+    'config_environment': 'heldout'
 }
 param_awjuliani={   # awjuliani/metaRL parameters
     'gamma' : .8,                         # 0.8 in awjuliani/meta-RL
