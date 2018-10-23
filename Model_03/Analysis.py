@@ -26,7 +26,7 @@ path_data_master=['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Mod
 #path_data = '20181002_010133'
 #path_data = '20181010_054352'
 #path_data = '20181022_151849'
-path_data = '20181022_170911'
+path_data = '20181023_012320'
 
 
 paths_data=[

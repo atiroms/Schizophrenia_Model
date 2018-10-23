@@ -16,8 +16,8 @@
 ##############
 
 param_basic={
-    #'param_set': 'Wang2018',
-    'param_set':  'exp1',
+    'param_set': 'Wang2018',
+    #'param_set':  'exp1',
     #'param_set' : 'awjuliani',
     #'param_set' : 'Wang2018_fast',
     #'param_set' : 'Wang2018_statevalue',
@@ -38,8 +38,8 @@ param_basic={
 
     'agent': 'A2C',
 
-    #'episode_stop' : 50000,
-    'episode_stop' : 200000,
+    'episode_stop' : 50000,
+    #'episode_stop' : 200000,
     #'episode_stop' : 100,
 
     'interval_summary':1,               # interval to save simulation summary in original format
