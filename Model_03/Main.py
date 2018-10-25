@@ -102,7 +102,7 @@ param_batch=[
 
 import os
 import threading
-#import multiprocessing
+#import multiprocessingA2
 import numpy as np
 #import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -110,9 +110,12 @@ import datetime
 import time
 import pandas as pd
 import json
-from Agent import *
-from Network import *
-from Environment import *
+import Agent
+import Network
+import Environment
+#from Agent import *
+#from Network import *
+#from Environment import *
 
 
 ####################
@@ -188,10 +191,10 @@ class Run():
             elif self.param.optimizer == "RMSProp":
                 self.trainer = tf.train.RMSPropOptimizer(learning_rate=self.param.learning_rate)
             if self.param.environment == 'Two_Armed_Bandit':
-                agent_alias=Two_Armed_Bandit
+                agent_alias=Environment.Two_Armed_Bandit
             elif self.param.environment == 'Dual_Assignment_with_Hold':
-                agent_alias=Dual_Assignment_with_Hold
-            self.master_network = LSTM_RNN_Network(self.param,
+                agent_alias=Environment.Dual_Assignment_with_Hold
+            self.master_network = Network.LSTM_RNN_Network(self.param,
                                                 agent_alias(self.param.config_environment).n_actions,
                                                 'master',None) # Generate master network
             #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
@@ -199,7 +202,7 @@ class Run():
             self.agents = []
             # Create A2C_Agent classes
             for i in range(self.param.n_agents):
-                self.agents.append(A2C_Agent(i,self.param,agent_alias(self.param.config_environment),
+                self.agents.append(Agent.A2C_Agent(i,self.param,agent_alias(self.param.config_environment),
                                              self.trainer,self.saver,self.episode_global))
 
         # Run agents
