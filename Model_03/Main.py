@@ -31,6 +31,7 @@ param_basic={
 
     'path_save_master' : ['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data',
                           'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
+                          'F:/Machine_Learning/Schizophrenia_Model/saved_data',
                           '/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data'],
     #'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
 
@@ -167,6 +168,7 @@ class Run():
             elif i==len(self.param.path_save_master)-1:
                 raise ValueError('Save folder does not exist.')
 
+
         #path_save=self.param.path_save_master+'/'+datetime_start
         self.param.add_item({'datetime_start':datetime_start, 'path_save':path_save})
 
@@ -240,7 +242,15 @@ class BatchRun():
         self.n_param=len(param_batch)
         # Directory organization for saving
         datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
-        self.path_save_batch=param_basic['path_save_master'] + '/' + datetime_start
+
+        for i in range(len(param_basic['path_save_master'])):
+            if os.path.exists(param_basic['path_save_master'][i]):
+                self.path_save_batch=param_basic['path_save_master'][i]+'/'+datetime_start
+                break
+            elif i==len(param_basic['path_save_master'])-1:
+                raise ValueError('Save folder does not exist.')
+
+        #self.path_save_batch=param_basic['path_save_master'] + '/' + datetime_start
         if not os.path.exists(self.path_save_batch):
             os.makedirs(self.path_save_batch)
 
@@ -291,7 +301,7 @@ class BatchRun():
         for i in range(len(self.batch_table)):
             print('Starting batch: ' + str(i + 1) + '/' + str(len(self.batch_table)))
             param_dict=self.batch_table.loc[i,self.batch_table.columns.difference(['datetime_start','done'])].to_dict()
-            param_dict['path_save_master']=self.path_save_batch
+            param_dict['path_save_master']=[self.path_save_batch]
             run=Run(param_basic=param_basic,param_change=param_dict)
             datetime_start=run.param.datetime_start
             self.batch_table.loc[i,'datetime_start']=datetime_start
@@ -305,6 +315,5 @@ class BatchRun():
         hdf=pd.HDFStore(self.path_save_batch+'/batch_table.h5')
         hdf.put('batch_table',self.batch_table,format='table',append=False,data_columns=True)
         hdf.close()
-
 
 print('End of file.')
