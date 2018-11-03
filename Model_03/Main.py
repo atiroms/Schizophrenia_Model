@@ -218,8 +218,9 @@ class Run():
             else:
                 sess.run(tf.global_variables_initializer())
             coord = tf.train.Coordinator()
-            if self.param.xpu=='/gpu:0' and self.param.n_agents==1:
-                self.agents[0].work(self.param,sess,coord,self.saver)
+            #if self.param.xpu=='/gpu:0' and self.param.n_agents==1:
+            if self.param.n_agents==1:
+                self.agents[0].work(sess,coord)
             elif self.param.xpu=='/gpu:0' and self.param.n_agents>1:
                 raise ValueError('Multi-threading not allowed with GPU.')
             else:
