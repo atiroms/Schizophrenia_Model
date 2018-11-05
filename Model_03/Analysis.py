@@ -266,7 +266,7 @@ class Batch_Average():
         hdf = pd.HDFStore(self.path+'/batch_table.h5')
         self.batch_table = pd.DataFrame(hdf['batch_table'])
         hdf.close()
-        #self.batch_table = self.batch_table.iloc[0:4,:]
+        #self.batch_table = self.batch_table.iloc[0:10,:]
 
         # subset batch table
         for key in list(self.subset.keys()):
@@ -274,6 +274,7 @@ class Batch_Average():
 
         # read subdirectory using subset of batch table
         for i in range(len(self.batch_table_subset)):
+            print('Reading ' + str(i) + '/' + str(len(self.batch_table_subset)) + '                 ', end='\r')
             subdir=self.batch_table_subset['datetime_start'].iloc[i]
             path=self.path + '/' + subdir
             summary=Load_Summary(path_data=path).output[['episode','reward']]
