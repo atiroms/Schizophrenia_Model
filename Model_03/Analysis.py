@@ -11,6 +11,7 @@
 
 path_data_master=['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data',
                   'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
+                  'D:/Machine_Learning/Schizophrenia_Model/saved_data',
                   'F:/Machine_Learning/Schizophrenia_Model/saved_data',
                   '/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data']
 
@@ -213,7 +214,7 @@ class Average_Episode():
         print('Calculating averages over ' + str(self.extent) + ' episodes.')
         self.output=pd.DataFrame(columns=self.input.columns)
         for i in range(self.length):
-            print('Calculating ' + str(i) + '/' + str(self.length) + '                 ', end='\r')
+            print('Calculating ' + str(i) + '/' + str(self.length) + '                 ', end='/r')
             self.output=self.output.append(self.input.iloc[i:(i+self.extent),:].mean(),ignore_index=True)
             #self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
         print('Finished calculating averages.')
@@ -274,7 +275,7 @@ class Batch_Average():
 
         # read subdirectory using subset of batch table
         for i in range(len(self.batch_table_subset)):
-            print('Reading ' + str(i) + '/' + str(len(self.batch_table_subset)) + '                 ', end='\r')
+            print('Reading ' + str(i) + '/' + str(len(self.batch_table_subset)) + '                 ', end='/r')
             subdir=self.batch_table_subset['datetime_start'].iloc[i]
             path=self.path + '/' + subdir
             summary=Load_Summary(path_data=path).output[['episode','reward']]
@@ -298,7 +299,7 @@ class Visualize_Averages():
         fig = self.averages.iplot(
             kind="scatter", asFigure=True,x='episode', title='Reward - Episode',
             #xTitle='Episode', yTitle='Reward', colors=['blue'])
-            xTitle='Episode', yTitle='Reward', colors=['blue'])
+            xTitle='Episode', yTitle='Reward')
         #fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Perf/Reward')
         py.offline.plot(fig, filename=self.path + '/Reward.html')
 
