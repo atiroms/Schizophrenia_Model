@@ -10,8 +10,8 @@
 ##############
 
 path_data_master=['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data',
-                  'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
                   'D:/Machine_Learning/Schizophrenia_Model/saved_data',
+                  'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
                   'F:/Machine_Learning/Schizophrenia_Model/saved_data',
                   '/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data']
 
