@@ -10,7 +10,10 @@
 ##############
 
 path_data_master=['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data',
-                  'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data']
+                  'D:/Machine_Learning/Schizophrenia_Model/saved_data',
+                  'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
+                  'F:/Machine_Learning/Schizophrenia_Model/saved_data',
+                  '/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data']
 
 #path_data = '20180914_000352'   # summary saved every 50 episodes
 #path_data = '20180918_211807'
@@ -26,7 +29,9 @@ path_data_master=['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Mod
 #path_data = '20181002_010133'
 #path_data = '20181010_054352'
 #path_data = '20181022_151849'
-path_data = '20181023_012320'
+#path_data = '20181023_012320'
+path_data = '20181026_000131'
+#path_data = '20181026_000136'
 
 
 paths_data=[
@@ -59,12 +64,16 @@ import math
 # DATA FOLDER CONFIRMATION #
 ############################
 
-for i in range(len(path_data_master)):
-    if os.path.exists(path_data_master[i]):
-        path_data=path_data_master[i]+'/'+path_data
-        break
-    elif i==len(path_data_master)-1:
-        raise ValueError('Save folder does not exist.')
+
+class Confirm_Datafolder():
+    def __init__(self,path_data=path_data,path_data_master=path_data_master):
+        for i in range(len(path_data_master)):
+            if os.path.exists(path_data_master[i]):
+                path_data=path_data_master[i]+'/'+path_data
+                break
+            elif i==len(path_data_master)-1:
+                raise ValueError('Save folder does not exist.')
+        self.path_output=path_data
 
 
 ##############################
@@ -115,43 +124,51 @@ class Extract_Checkpoint():
 #####################
 
 class Load_Summary():
-    def __init__(self,path_data=path_data):
-        print('Starting hdf5 file loading.')
-        self.path_data=path_data + '/summary'
-        hdf = pd.HDFStore(self.path_data+'/summary.h5')
+    def __init__(self,path_data=None):
+        if path_data is None:
+            path=Confirm_Datafolder().path_output
+        else:
+            path=path_data
+        #print('Starting hdf5 file loading.')
+        self.path=path + '/summary'
+        hdf = pd.HDFStore(self.path+'/summary.h5')
         self.output = pd.DataFrame(hdf['summary'])
         hdf.close()
-        print('Finished hdf5 file loading.')
+        #print('Finished hdf5 file loading.')
 
 class Load_Summary_Old():
-    def __init__(self,path_data=path_data):
+    def __init__(self,path_data=None):
+        if path_data is None:
+            path=Confirm_Datafolder().path_output
         print('Starting hdf5 file loading.')
-        self.path_data=path_data + '/summary'
-        hdf = pd.HDFStore(self.path_data+'/summary.h5')
+        self.path=path + '/summary'
+        hdf = pd.HDFStore(self.path+'/summary.h5')
         self.output = pd.DataFrame(hdf['summary'])
         self.output.columns=hdf['colnames'].tolist()
         hdf.close()
         print('Finished hdf5 file loading.')
 
 class Load_Activity():
-    def __init__(self,path_data=path_data):
+    def __init__(self,path_data=None):
+        if path_data is None:
+            path=Confirm_Datafolder().path_output
         print('Starting hdf5 file loading.')
-        self.path_data=path_data + '/activity'
-        hdf = pd.HDFStore(self.path_data+'/activity.h5')
+        self.path=path + '/activity'
+        hdf = pd.HDFStore(self.path+'/activity.h5')
         self.output = pd.DataFrame(hdf['activity'])
         hdf.close()
         print('Finished hdf5 file loading.')
 
-
 class Load_Variable():
-    def __init__(self,path_data=path_data):
+    def __init__(self,path_data=None):
+        if path_data is None:
+            path=Confirm_Datafolder().path_output
         print('Starting hdf5 file loading.')
-        self.path_data=path_data + '/model'
-        hdf = pd.HDFStore(self.path_data+'/variable.h5')
+        self.path=path + '/model'
+        hdf = pd.HDFStore(self.path+'/variable.h5')
         self.output = pd.DataFrame(hdf['variable'])
         hdf.close()
         print('Finished hdf5 file loading.')
-
 
 
 #################
@@ -182,7 +199,28 @@ class Visualize():
 # AVERAGE OVER EPISODES #
 #########################
 
-class AveEpisode():
+class Average_Episode():
+    def __init__(self,dataframe,extent=100,column=[]):
+        self.input=dataframe
+        if len(column)>0:
+            column_selected=['episode']+column
+            self.input=self.input[column_selected]
+        self.extent=extent
+        self.length=len(self.input)-self.extent+1
+        #self.length=math.floor(len(self.input)/self.extent)
+        self.calc_average()
+
+    def calc_average(self):
+        print('Calculating averages over ' + str(self.extent) + ' episodes.')
+        self.output=pd.DataFrame(columns=self.input.columns)
+        for i in range(self.length):
+            print('Calculating ' + str(i) + '/' + str(self.length) + '                 ', end='/r')
+            self.output=self.output.append(self.input.iloc[i:(i+self.extent),:].mean(),ignore_index=True)
+            #self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
+        print('Finished calculating averages.')
+
+
+class Average_Episode_Old():
     def __init__(self,dataframe,interval):
         self.input=dataframe
         self.interval=interval
@@ -207,9 +245,63 @@ class RewardAverageGraphBatch():
         for p in paths_data:
             print('Calculating ' + p + '.')
             df=Load_Summary(path_data=p).output
-            ave=AveEpisode(dataframe=df,interval=100).output
+            ave=Average_Episode(dataframe=df,extent=100).output
             vis=Visualize(dataframe=ave,path_data=p)
         print('Finished batch calculation.')
+
+
+#######################
+# BATCH DATA ANALYSIS #
+#######################
+
+class Batch_Average():
+    def __init__(self, path_data=None,subset={'optimizer':'RMSProp'}):
+        if path_data is None:
+            path=Confirm_Datafolder().path_output
+        else:
+            path=path_data
+        self.path=path
+        self.subset=subset
+
+        # Read batch_table
+        hdf = pd.HDFStore(self.path+'/batch_table.h5')
+        self.batch_table = pd.DataFrame(hdf['batch_table'])
+        hdf.close()
+        #self.batch_table = self.batch_table.iloc[0:10,:]
+
+        # subset batch table
+        for key in list(self.subset.keys()):
+            self.batch_table_subset=self.batch_table.loc[self.batch_table[key]==self.subset[key]]
+
+        # read subdirectory using subset of batch table
+        for i in range(len(self.batch_table_subset)):
+            print('Reading ' + str(i) + '/' + str(len(self.batch_table_subset)) + '                 ', end='/r')
+            subdir=self.batch_table_subset['datetime_start'].iloc[i]
+            path=self.path + '/' + subdir
+            summary=Load_Summary(path_data=path).output[['episode','reward']]
+            summary=summary.rename(columns={'reward':str(i)})
+            if i == 0:
+                self.summaries=summary
+            else:
+                self.summaries=pd.merge(self.summaries,summary,how='outer', on='episode')
+
+        self.averages=Average_Episode(dataframe=self.summaries).output
+
+
+class Visualize_Averages():   
+    def __init__(self,averages,path_data=None):
+        if path_data is None:
+            path=Confirm_Datafolder().path_output
+        else:
+            path=path_data
+        self.path=path
+        self.averages=averages
+        fig = self.averages.iplot(
+            kind="scatter", asFigure=True,x='episode', title='Reward - Episode',
+            #xTitle='Episode', yTitle='Reward', colors=['blue'])
+            xTitle='Episode', yTitle='Reward')
+        #fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Perf/Reward')
+        py.offline.plot(fig, filename=self.path + '/Reward.html')
 
 
 print('End of file.')
