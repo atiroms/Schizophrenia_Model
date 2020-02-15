@@ -303,7 +303,8 @@ class A2C_Agent():
                 t_save=time.time()-t_each_start
 
                 #print('Episode: ' + str(cnt_episode_global) + ', reward: ' + str(np.sum(episode_reward)) + ', calc time: ' + str(time.time()-t_start) + '               ', end='\r')
-                print('Episode: {}, Reward: {}, Calc time: {:.5f}           '.format(cnt_episode_global, np.sum(episode_reward), time.time()-t_start), end='\r')
+                #print('Episode: {}, Reward: {}, Calc time: {:.5f}           '.format(cnt_episode_global, np.sum(episode_reward), time.time()-t_start), end='\r')
+                print('\rEpisode: {}, Reward: {}, Calc time: {:.5f}           '.format(cnt_episode_global, np.sum(episode_reward), time.time()-t_start),end='')
                 #print('episode: ' + str(cnt_episode_global) + ', copy time: ' + str(t_copy) + ', prep time: ' + str(t_prepare) + ', act time: ' + str(t_act) + ', train time: ' + str(t_train) + ', save time: ' + str(t_save) + '.             ', end='\r')
 
                 if cnt_episode_global == self.param.episode_stop:

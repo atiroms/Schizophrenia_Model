@@ -33,16 +33,16 @@ param_basic={
                           'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
                           'F:/Machine_Learning/Schizophrenia_Model/saved_data',
                           '/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data',
-                          'I:/Machine_Learning/Schizophrenia_Model/saved_data'],
+                          'D:/Machine_Learning/Schizophrenia_Model/saved_data'],
     #'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
 
     'n_agents' : 1,                       # number of agents that act in parallel
 
     'agent': 'A2C',
 
-    'episode_stop' : 50000,
+    #'episode_stop' : 50000,
     #'episode_stop' : 200000,
-    #'episode_stop' : 100,
+    'episode_stop' : 100,
 
     'interval_summary':1,               # interval to save simulation summary in original format
     #'interval_summary':100,
@@ -54,7 +54,8 @@ param_basic={
     'interval_var': 10,                 # interval to save trainable network variables in original format
     #'interval_var': 0,
     #'interval_persist':1000,             # interval of persistent saving
-    'interval_persist':200,
+    #'interval_persist':200,
+    'interval_persist':100,
     'interval_gc':200                   # interval of garbage collection
 }
 param_default={    # Wang 2018 parameters
@@ -113,6 +114,7 @@ import datetime
 import time
 import pandas as pd
 import json
+os.chdir('D:/atiroms/GitHub/Schizophrenia_Model/Model_03')
 import Agent
 import Network
 import Environment
