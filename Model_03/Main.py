@@ -32,7 +32,8 @@ param_basic={
     'path_save_master' : ['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data',
                           'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
                           'F:/Machine_Learning/Schizophrenia_Model/saved_data',
-                          '/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data'],
+                          '/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data',
+                          'I:/Machine_Learning/Schizophrenia_Model/saved_data'],
     #'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
 
     'n_agents' : 1,                       # number of agents that act in parallel
@@ -89,10 +90,11 @@ param_Wang2018_satatevalue={
 param_batch=[
     #{'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}
     #{'name': 'learning_rate', 'n':10, 'type':'parametric','method':'grid','min':0.0057,'max':0.0102},
-    {'name': 'learning_rate', 'n':100, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
+    #{'name': 'learning_rate', 'n':100, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
+    {'name': 'learning_rate', 'n':2, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
     #{'name':'dummy_counter', 'n':2, 'type':'parametric', 'method':'grid', 'min':0,'max':1}
     #{'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
-    {'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
+    #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
     #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
 ]
 
