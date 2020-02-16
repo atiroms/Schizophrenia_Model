@@ -1,92 +1,23 @@
-###############
-# DESCRIPTION #
-###############
+######################################################################
+# Description ########################################################
+######################################################################
+'''
+Python code for meta reinforcement learning
+For a single run,
+  run=Run()
+  run.run()
+For batch runs,
+  batch=BatchRun()
+  batch.run()
+'''
 
-# Python code for meta reinforcement learning
-# For a single run,
-#   run=Run()
-#   run.run()
-# For batch runs,
-#   batch=BatchRun()
-#   batch.run()
+######################################################################
+# Parameters #########################################################
+######################################################################
 
-
-##############
-# PARAMETERS #
-##############
-
-param_basic={
-    'param_set': 'Wang2018',
-    #'param_set':  'exp1',
-    #'param_set' : 'awjuliani',
-    #'param_set' : 'Wang2018_fast',
-    #'param_set' : 'Wang2018_statevalue',
-
-    'xpu' : '/cpu:0',                    # processing device allocation
-    #'xpu' : '/gpu:0',
-
-    'train' : True,
-    'load_model' : False,
-    'path_load' : './saved_data/20180917_011631',
-
-    'path_save_master' : ['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data',
-                          'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
-                          'F:/Machine_Learning/Schizophrenia_Model/saved_data',
-                          '/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data',
-                          'D:/Machine_Learning/Schizophrenia_Model/saved_data'],
-    #'path_save_master' : 'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
-
-    'n_agents' : 1,                       # number of agents that act in parallel
-
-    'agent': 'A2C',
-
-    #'episode_stop' : 50000,
-    #'episode_stop' : 200000,
-    'episode_stop' : 100,
-
-    'interval_summary':1,               # interval to save simulation summary in original format
-    #'interval_summary':100,
-    'interval_ckpt': 1000,              # interval to save network parameters in tf default format
-    #'interval_pic': 100,
-    'interval_pic': 0,                  # interval to save task pictures
-    'interval_activity':1,              # interval to save all activity of an episode
-    #'interval_activity':0,
-    'interval_var': 10,                 # interval to save trainable network variables in original format
-    #'interval_var': 0,
-    #'interval_persist':1000,             # interval of persistent saving
-    #'interval_persist':200,
-    'interval_persist':100,
-    'interval_gc':200                   # interval of garbage collection
-}
-param_default={    # Wang 2018 parameters
-    'n_cells_lstm' : 48,                  # number of cells in LSTM-RNN network
-    'bootstrap_value' : 0.0,
-    'environment' : 'Two_Armed_Bandit',
-    'config_environment' : 'uniform',             # select "independent" for independent bandit
-    'gamma' : .9,                         # 0.9 in Wang Nat Neurosci 2018, discount rate for advantage estimation and reward discounting
-    'optimizer' : 'RMSProp',              # "RMSProp" in Wang 2018, "Adam" in awjuliani/meta-RL
-    'learning_rate' : 0.0007,             # Wang Nat Neurosci 2018
-    'cost_statevalue_estimate' : 0.05,    # 0.05 in Wang 2018, 0.5 in awjuliani/meta-RL
-    'cost_entropy' : 0.05,                # 0.05 in Wang 2018 and awjuliani/meta-RL
-    'dummy_counter' : 0                   # dummy counter used for batch calculation
-}
-param_exp1={
-    'environment' : 'Dual_Assignment_with_Hold',
-    'gamma' : 0.75,
-    'config_environment': 'heldout'
-}
-param_awjuliani={   # awjuliani/metaRL parameters
-    'gamma' : .8,                         # 0.8 in awjuliani/meta-RL
-    'optimizer' : 'Adam',
-    'learning_rate' : 1e-3,               # awjuliani/meta-RL
-    'cost_statevalue_estimate' : 0.5,
-}
-param_Wang2018_fast={
-    'learning_rate' : 0.007
-}
-param_Wang2018_satatevalue={
-    'cost_statevalue_estimate' : 0.5
-}
+#set_param_sim='param_sim.json'
+set_param_sim='param_test.json'
+set_param_mod='param_wang2018.json'
 
 param_batch=[
     #{'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}
@@ -100,11 +31,36 @@ param_batch=[
 ]
 
 
-#############
-# LIBRARIES #
-#############
+######################################################################
+# Libraries ##########################################################
+######################################################################
 
 import os
+list_path_code=[
+    'D:/atiroms/GitHub/Schizophrenia_Model/Model_03',
+    'C:/Users/atiro/GitHub/Schizophrenia_Model/Model_03',
+]
+for i in range(len(list_path_code)):
+    if os.path.exists(list_path_code[i]):
+        path_code=list_path_code[i]
+        os.chdir(path_code)
+        break
+    elif i==len(list_path_code)-1:
+        raise ValueError('Code folder does not exist in the list.')
+list_path_save=[
+    "/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data",
+    "/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data",
+    "C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data",
+    "D:/Machine_Learning/Schizophrenia_Model/saved_data",
+    "F:/Machine_Learning/Schizophrenia_Model/saved_data"
+]
+for i in range(len(list_path_save)):
+    if os.path.exists(list_path_save[i]):
+        path_save=list_path_save[i]
+        break
+    elif i==len(list_path_save)-1:
+        raise ValueError('Save folder does not exist in the list.')
+
 import threading
 #import multiprocessingA2
 import numpy as np
@@ -114,79 +70,67 @@ import datetime
 import time
 import pandas as pd
 import json
-os.chdir('D:/atiroms/GitHub/Schizophrenia_Model/Model_03')
 import Agent
 import Network
 import Environment
-#from Agent import *
-#from Network import *
-#from Environment import *
 
 
-####################
-# PARAMETERS CLASS #
-####################
+######################################################################
+# Parameters class for parameter exchange between classes ############
+######################################################################
 
 class Parameters():
-    def __init__(self,param_basic):
-        self.add_item(param_basic)
-        if self.param_set == 'Wang2018':
-            self.add_item(param_default)
-        elif self.param_set == 'exp1':
-            self.add_item(param_default)
-            self.add_item(param_exp1)
-        elif self.param_set == 'awjuliani':
-            self.add_item(param_default)
-            self.add_item(param_awjuliani)
-        elif self.param_set == 'Wang2018_fast':     # 10 times larger learning rate
-            self.add_item(param_default)
-            self.add_item(param_Wang2018_fast)
-        elif self.param_set == 'Wang2018_statevalue':
-            self.add_item(param_default)
-            self.add_item(param_Wang2018_satatevalue)
-        else:
-            raise ValueError('Undefined parameter set name: ' + self.param_set + '.')
+    def __init__(self,set_param,path_code=path_code):
+        self.set=None
+        self.add_json(set_param,path_code)
 
-    def add_item(self,dictionary):
-        for key,value in dictionary.items():
-            setattr(self,key,value)
+    def add_dict(self,dict_param):
+        for key,value in dict_param.items():
+            if key!="//":
+                setattr(self,key,value)
+
+    def add_json(self,set_param,path_code=path_code):
+        with open(os.path.join(path_code,"parameters",set_param)) as f:
+            dict_param=json.load(f)
+            self.add_dict(dict_param)
+        if self.set is None:
+            self.set=list()
+        self.set.append(set_param)
 
 
-#############
-# MAIN CODE #
-#############
+######################################################################
+# Single run of simulation ###########################################
+######################################################################
 
 class Run():
-    def __init__(self,param_basic=param_basic,param_change=None):
-        self.param=Parameters(param_basic)
-        if param_change is not None:
-            self.param.add_item(param_change)
+    #def __init__(self,param_basic=param_basic,param_change=None):
+    def __init__(self,set_param_sim=set_param_sim,set_param_mod=set_param_mod,
+                 set_param_overwrite=None,
+                 path_code=path_code,path_save=path_save):
 
         # Timestamping directory name
         datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
 
-        for i in range(len(self.param.path_save_master)):
-            if os.path.exists(self.param.path_save_master[i]):
-                path_save=self.param.path_save_master[i]+'/'+datetime_start
-                break
-            elif i==len(self.param.path_save_master)-1:
-                raise ValueError('Save folder does not exist.')
+        # Setup parameters in Parmeters object
+        self.param=Parameters(set_param_sim,path_code)
+        self.param.add_json(set_param_mod,path_code)
+        self.param.add_dict({'datetime_start':datetime_start, 'path_save':os.path.join(path_save,datetime_start)})
+        if set_param_overwrite is not None:
+            self.param.add_dict(set_param_overwrite)
 
-
-        #path_save=self.param.path_save_master+'/'+datetime_start
-        self.param.add_item({'datetime_start':datetime_start, 'path_save':path_save})
-
-        if not os.path.exists(path_save):
-            os.makedirs(path_save)
+        # Make directories for saving
+        if not os.path.exists(self.param.path_save):
+            os.makedirs(self.param.path_save)
         for subdir in ['model','pic','summary','activity']:
-            if not os.path.exists(path_save + '/' + subdir):
-                os.makedirs(path_save + '/' + subdir)
-
-        with open(path_save+'/parameters.json', 'w') as fp:
+            if not os.path.exists(os.path.join(self.param.path_save,subdir)):
+                os.makedirs(os.path.join(self.param.path_save,subdir))
+        
+        # Save parameters
+        with open(os.path.join(self.param.path_save,'parameters.json'), 'w') as fp:
             json.dump(self.param.__dict__, fp, indent=1)
 
     def run(self):
-        print('Data saved in: '+ self.param.path_save + '.')
+        print('Running: '+ self.param.datetime_start + '.')
         tf.reset_default_graph()
         # Setup agents for multiple threading
         with tf.device(self.param.xpu):
@@ -235,27 +179,21 @@ class Run():
                     thread.start()
                     agent_threads.append(thread)
                 coord.join(agent_threads)
-        print('Finished ID: '+ self.param.datetime_start + '.')
+        print('Single run done: '+ self.param.datetime_start + '.')
 
 
-#############
-# BATCH RUN #
-#############
+######################################################################
+# Batch run of simulations ###########################################
+######################################################################
 
 class BatchRun():
-    def __init__(self,param_batch=param_batch,param_basic=param_basic):
+    def __init__(self,param_batch=param_batch,
+                 path_save=path_save):
+    #def __init__(self,param_batch=param_batch,param_basic=param_basic):
         self.n_param=len(param_batch)
-        # Directory organization for saving
+        # Timestamping directory name
         datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
-
-        for i in range(len(param_basic['path_save_master'])):
-            if os.path.exists(param_basic['path_save_master'][i]):
-                self.path_save_batch=param_basic['path_save_master'][i]+'/'+datetime_start
-                break
-            elif i==len(param_basic['path_save_master'])-1:
-                raise ValueError('Save folder does not exist.')
-
-        #self.path_save_batch=param_basic['path_save_master'] + '/' + datetime_start
+        self.path_save_batch=os.path.join(path_save,datetime_start)
         if not os.path.exists(self.path_save_batch):
             os.makedirs(self.path_save_batch)
 
@@ -302,19 +240,20 @@ class BatchRun():
         with open(self.path_save_batch+'/parameters_batch.json', 'w') as fp:
             json.dump(param_batch, fp, indent=1)
 
+        print('Batch setup done.')
+
     def run(self):
         for i in range(len(self.batch_table)):
-            print('Starting batch: ' + str(i + 1) + '/' + str(len(self.batch_table)))
-            param_dict=self.batch_table.loc[i,self.batch_table.columns.difference(['datetime_start','done'])].to_dict()
-            param_dict['path_save_master']=[self.path_save_batch]
-            run=Run(param_basic=param_basic,param_change=param_dict)
-            datetime_start=run.param.datetime_start
-            self.batch_table.loc[i,'datetime_start']=datetime_start
+            print('Running batch: ' + str(i + 1) + '/' + str(len(self.batch_table)),'.')
+            param_overwrite=self.batch_table.loc[i,self.batch_table.columns.difference(['datetime_start','done'])].to_dict()
+            param_overwrite['path_save_batch']=[self.path_save_batch]
+            run=Run(path_save=self.path_save_batch,set_param_overwrite=param_overwrite)
+            self.batch_table.loc[i,'datetime_start']=run.param.datetime_start
             self.save_batch_table()
             run.run()
             self.batch_table.loc[i,'done']=True
             self.save_batch_table()
-        print('Finished batch calculation.')
+        print('Batch run done.')
 
     def save_batch_table(self):
         hdf=pd.HDFStore(self.path_save_batch+'/batch_table.h5')
