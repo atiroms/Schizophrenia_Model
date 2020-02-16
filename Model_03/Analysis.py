@@ -30,10 +30,11 @@ path_data_master=['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Mod
 #path_data = '20181010_054352'
 #path_data = '20181022_151849'
 #path_data = '20181023_012320'
-path_data = '20181026_000131'
+#path_data = '20181026_000131'
 #path_data = '20181026_000136'
+path_data = '20200216_003928'
 
-
+'''
 paths_data=[
     '20180918_211807',
     '20180921_011111',
@@ -43,7 +44,8 @@ paths_data=[
     '20180926_002716',
     '20180928_233909',
 ]
-
+'''
+paths_data = ['20200216_003928']
 
 #############
 # LIBRARIES #
