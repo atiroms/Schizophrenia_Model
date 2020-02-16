@@ -41,7 +41,7 @@ for i in range(len(list_path_data)):
         raise ValueError('Data folder does not exist in the list.')
 
 #dir_data = '20200216_191229'
-ir_data = '20200216_204436'
+dir_data = '20200216_204436'
 #list_dir_data = ['20200216_003928']
 
 ######################################################################
@@ -78,12 +78,6 @@ class Confirm_Datafolder():
 ######################################################################
 # HDF5 data loading for each type of data ############################
 ######################################################################
-
-class Load_Summary():
-    def __init__(self,path_data=path_data):
-        with pd.HDFStore(path_data+'/summary/summary.h5') as hdf:
-            self.output = pd.DataFrame(hdf['summary'])
-        #print('Finished hdf5 file loading.')
 
 class Load_Activity():
     def __init__(self,path_data=None):
@@ -186,7 +180,7 @@ class Batch_Average():
             with pd.HDFStore(path+'/summary/summary.h5') as hdf:
                 summary = pd.DataFrame(hdf['summary'])
             
-            summary=summary.rename(columns={'reward':str(i)})
+            summary=summary[['episode','reward']].rename(columns={'reward':str(i)})
             if i == 0:
                 self.summaries=summary
             else:

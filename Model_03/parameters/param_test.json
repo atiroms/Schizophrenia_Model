@@ -9,26 +9,26 @@
     "path_load" : "./saved_data/20180917_011631",
 
     "//":"Number of episodes to run: '100','50000','200000'",
-    "episode_stop" : 1000,
+    "episode_stop" : 500,
 
     "//":"Interval to save simulation summary in original format: '1', '100'",
     "interval_summary":1,
 
     "//":"Interval to save network parameters in tf default format: '100','1000'",
-    "interval_ckpt": 1000,
+    "interval_ckpt": 100,
 
     "//":"Interval to save task pictures: '0','100'",
     "interval_pic": 0,
 
     "//":"Interval to save all activity within each episode: '0','1'",
-    "interval_activity":1,
+    "interval_activity":100,
 
     "//":"Interval to save trainable network variables in original format: '0', '10'",
-    "interval_var": 10,
+    "interval_var": 100,
 
     "//":"Interval of persistent saving (memory to disk): '100','200','1000'",
     "interval_persist":100,
 
     "//":"Interval of garbage collection: '100'",
-    "interval_gc":200
+    "interval_gc":100
 }

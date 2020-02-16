@@ -11,23 +11,25 @@ For batch runs,
   batch.run()
 '''
 
+
 ######################################################################
 # Parameters #########################################################
 ######################################################################
 
-#set_param_sim='param_sim.json'
-set_param_sim='param_test.json'
+set_param_sim='param_sim.json'
+#set_param_sim='param_test.json'
 set_param_mod='param_wang2018.json'
 
 param_batch=[
     #{'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}
     #{'name': 'learning_rate', 'n':10, 'type':'parametric','method':'grid','min':0.0057,'max':0.0102},
     #{'name': 'learning_rate', 'n':100, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
-    {'name': 'learning_rate', 'n':2, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
+    #{'name': 'learning_rate', 'n':2, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
     #{'name':'dummy_counter', 'n':2, 'type':'parametric', 'method':'grid', 'min':0,'max':1}
     #{'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
     #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
     #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
+    {'name': 'n_cells_lstm', 'n':11, 'type':'parametric','method':'grid','min':4,'max':48},
 ]
 
 
@@ -179,7 +181,7 @@ class Run():
                     thread.start()
                     agent_threads.append(thread)
                 coord.join(agent_threads)
-        print('Single run done: '+ self.param.datetime_start + '.')
+        print('Done single run: '+ self.param.datetime_start + '.')
 
 
 ######################################################################
@@ -189,7 +191,6 @@ class Run():
 class BatchRun():
     def __init__(self,param_batch=param_batch,
                  path_save=path_save):
-    #def __init__(self,param_batch=param_batch,param_basic=param_basic):
         self.n_param=len(param_batch)
         # Timestamping directory name
         datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
@@ -240,7 +241,7 @@ class BatchRun():
         with open(self.path_save_batch+'/parameters_batch.json', 'w') as fp:
             json.dump(param_batch, fp, indent=1)
 
-        print('Batch setup done.')
+        print('Done batch setup.')
 
     def run(self):
         for i in range(len(self.batch_table)):
@@ -253,7 +254,7 @@ class BatchRun():
             run.run()
             self.batch_table.loc[i,'done']=True
             self.save_batch_table()
-        print('Batch run done.')
+        print('Done batch run.')
 
     def save_batch_table(self):
         hdf=pd.HDFStore(self.path_save_batch+'/batch_table.h5')
