@@ -280,26 +280,6 @@ class A2C_Agent():
                         #print('Garbage collction: ' + str(n_gc) + ' objects.')
                         gc.disable()
 
-                '''
-                # Save episode summary in /summary folder
-                summary_episode = tf.Summary()
-                summary_episode.value.add(tag="Performance/Reward", simple_value=float(np.sum(episode_reward)))
-                summary_episode.value.add(tag="Performance/Mean State-Action Value", simple_value=float(np.mean(episode_values)))
-                summary_episode.value.add(tag="Simulation/Calculation Time", simple_value=float(time.time()-t_start))
-                summary_episode.value.add(tag="Environment/Step Length", simple_value=int(step_episode))
-                summary_episode.value.add(tag="Environment/Arm0 Probability", simple_value=float(bandit[0]))
-                summary_episode.value.add(tag="Environment/Arm1 Probability", simple_value=float(bandit[1]))
-                if self.param.train == True:
-                    summary_episode.value.add(tag="Loss/Total Loss", simple_value=float(t_l))
-                    summary_episode.value.add(tag="Loss/Value Loss", simple_value=float(v_l))
-                    summary_episode.value.add(tag="Loss/Policy Loss", simple_value=float(p_l))
-                    summary_episode.value.add(tag="Loss/Policy Entropy", simple_value=float(e_l))
-                    summary_episode.value.add(tag="Loss/Gradient L2Norm", simple_value=float(g_n))
-                    summary_episode.value.add(tag="Loss/Variable L2Norm", simple_value=float(v_n))
-                self.summary_writer.add_summary(summary_episode, cnt_episode_global)
-                self.summary_writer.flush()
-                '''
-
                 t_save=time.time()-t_each_start
 
                 #print('Episode: ' + str(cnt_episode_global) + ', reward: ' + str(np.sum(episode_reward)) + ', calc time: ' + str(time.time()-t_start) + '               ', end='\r')
