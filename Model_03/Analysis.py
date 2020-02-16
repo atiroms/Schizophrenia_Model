@@ -25,44 +25,24 @@ summary/summary.h5:
 ######################################################################
 # Parameters #########################################################
 ######################################################################
-
-path_data_master=['/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data',
-                  'D:/Machine_Learning/Schizophrenia_Model/saved_data',
-                  'C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data',
-                  'F:/Machine_Learning/Schizophrenia_Model/saved_data',
-                  '/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data']
-
-#path_data = '20180914_000352'   # summary saved every 50 episodes
-#path_data = '20180918_211807'
-#path_data = '20180920_130605'
-#path_data = '20180921_011111'
-#path_data = '20180923_114142'
-#path_data = '20180924_175630'
-#path_data = '20180924_235841'
-#path_data = '20180926_002716'
-#path_data = '20180928_233909'
-#path_data = '20180929_001701'
-#path_data = '20181002_004726'
-#path_data = '20181002_010133'
-#path_data = '20181010_054352'
-#path_data = '20181022_151849'
-#path_data = '20181023_012320'
-#path_data = '20181026_000131'
-#path_data = '20181026_000136'
-path_data = '20200216_003928'
-
-'''
-paths_data=[
-    '20180918_211807',
-    '20180921_011111',
-    '20180923_114142',
-    '20180924_175630',
-    '20180924_235841',
-    '20180926_002716',
-    '20180928_233909',
+import os
+list_path_data=[
+    "/media/veracrypt1/Machine_Learning/Schizophrenia_Model/saved_data",
+    "/media/atiroms/MORITA_HDD3/Machine_Learning/Schizophrenia_Model/saved_data",
+    "C:/Users/atiro/Documents/Machine_Learning/Schizophrenia_Model/saved_data",
+    "D:/Machine_Learning/Schizophrenia_Model/saved_data",
+    "F:/Machine_Learning/Schizophrenia_Model/saved_data"
 ]
-'''
-paths_data = ['20200216_003928']
+for i in range(len(list_path_data)):
+    if os.path.exists(list_path_data[i]):
+        path_data=list_path_data[i]
+        break
+    elif i==len(list_path_data)-1:
+        raise ValueError('Data folder does not exist in the list.')
+
+#dir_data = '20200216_191229'
+ir_data = '20200216_204436'
+#list_dir_data = ['20200216_003928']
 
 ######################################################################
 # Libraries ##########################################################
@@ -83,6 +63,7 @@ import math
 # Data folder configuration ##########################################
 ######################################################################
 
+'''
 class Confirm_Datafolder():
     def __init__(self,path_data=path_data,path_data_master=path_data_master):
         for i in range(len(path_data_master)):
@@ -92,23 +73,16 @@ class Confirm_Datafolder():
             elif i==len(path_data_master)-1:
                 raise ValueError('Save folder does not exist.')
         self.path_output=path_data
-
+'''
 
 ######################################################################
 # HDF5 data loading for each type of data ############################
 ######################################################################
 
 class Load_Summary():
-    def __init__(self,path_data=None):
-        if path_data is None:
-            path=Confirm_Datafolder().path_output
-        else:
-            path=path_data
-        #print('Starting hdf5 file loading.')
-        self.path=path + '/summary'
-        hdf = pd.HDFStore(self.path+'/summary.h5')
-        self.output = pd.DataFrame(hdf['summary'])
-        hdf.close()
+    def __init__(self,path_data=path_data):
+        with pd.HDFStore(path_data+'/summary/summary.h5') as hdf:
+            self.output = pd.DataFrame(hdf['summary'])
         #print('Finished hdf5 file loading.')
 
 class Load_Activity():
@@ -159,7 +133,7 @@ class Visualize():
 
 
 ######################################################################
-# Average over episodes ##############################################
+# Average summary data to smooth for vizualization ###################
 ######################################################################
 
 class Average_Episode():
@@ -177,40 +151,10 @@ class Average_Episode():
         print('Calculating averages over ' + str(self.extent) + ' episodes.')
         self.output=pd.DataFrame(columns=self.input.columns)
         for i in range(self.length):
-            print('Calculating ' + str(i) + '/' + str(self.length) + '                 ', end='/r')
+            #print('\rCalculating ' + str(i) + '/' + str(self.length) + '                 ', end='')
             self.output=self.output.append(self.input.iloc[i:(i+self.extent),:].mean(),ignore_index=True)
             #self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
         print('Finished calculating averages.')
-
-
-class Average_Episode_Old():
-    def __init__(self,dataframe,interval):
-        self.input=dataframe
-        self.interval=interval
-        self.length=math.floor(len(self.input)/self.interval)
-        self.calc_average()
-
-    def calc_average(self):
-        print('Starting calculation of averages.')
-        print('Calculating averages over ' + str(self.interval) + ' episodes.')
-        self.output=pd.DataFrame(columns=self.input.columns)
-        for i in range(self.length):
-            self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
-        print('Finished calculating averages.')
-
-
-######################################################################
-# Batch of reward average graph visualization ########################
-######################################################################
-
-class RewardAverageGraphBatch():
-    def __init__(self,paths_data=paths_data):
-        for p in paths_data:
-            print('Calculating ' + p + '.')
-            df=Load_Summary(path_data=p).output
-            ave=Average_Episode(dataframe=df,extent=100).output
-            vis=Visualize(dataframe=ave,path_data=p)
-        print('Finished batch calculation.')
 
 
 ######################################################################
@@ -218,30 +162,30 @@ class RewardAverageGraphBatch():
 ######################################################################
 
 class Batch_Average():
-    def __init__(self, path_data=None,subset={'optimizer':'RMSProp'}):
-        if path_data is None:
-            path=Confirm_Datafolder().path_output
-        else:
-            path=path_data
-        self.path=path
+    def __init__(self, path_data=path_data,dir_data=dir_data,subset={}):
+        self.path=os.path.join(path_data,dir_data)
         self.subset=subset
 
         # Read batch_table
-        hdf = pd.HDFStore(self.path+'/batch_table.h5')
-        self.batch_table = pd.DataFrame(hdf['batch_table'])
-        hdf.close()
+        with pd.HDFStore(os.path.join(self.path,'batch_table.h5')) as hdf:
+            self.batch_table = pd.DataFrame(hdf['batch_table'])
         #self.batch_table = self.batch_table.iloc[0:10,:]
 
-        # subset batch table
-        for key in list(self.subset.keys()):
-            self.batch_table_subset=self.batch_table.loc[self.batch_table[key]==self.subset[key]]
+        # subset batch table by keys and values specified in 'subset'
+        if len(subset)>0:
+            for key in list(self.subset.keys()):
+                self.batch_table_subset=self.batch_table.loc[self.batch_table[key]==self.subset[key]]
+        else:
+            self.batch_table_subset=self.batch_table
 
         # read subdirectory using subset of batch table
         for i in range(len(self.batch_table_subset)):
-            print('Reading ' + str(i) + '/' + str(len(self.batch_table_subset)) + '                 ', end='/r')
+            print('Reading ' + str(i+1) + '/' + str(len(self.batch_table_subset)) + '                 ')
             subdir=self.batch_table_subset['datetime_start'].iloc[i]
             path=self.path + '/' + subdir
-            summary=Load_Summary(path_data=path).output[['episode','reward']]
+            with pd.HDFStore(path+'/summary/summary.h5') as hdf:
+                summary = pd.DataFrame(hdf['summary'])
+            
             summary=summary.rename(columns={'reward':str(i)})
             if i == 0:
                 self.summaries=summary
@@ -252,12 +196,8 @@ class Batch_Average():
 
 
 class Visualize_Averages():   
-    def __init__(self,averages,path_data=None):
-        if path_data is None:
-            path=Confirm_Datafolder().path_output
-        else:
-            path=path_data
-        self.path=path
+    def __init__(self,averages,path_data=path_data,dir_data=dir_data):
+        self.path=os.path.join(path_data,dir_data)
         self.averages=averages
         fig = self.averages.iplot(
             kind="scatter", asFigure=True,x='episode', title='Reward - Episode',
@@ -268,9 +208,23 @@ class Visualize_Averages():
 
 
 ######################################################################
+# Batch visualization of averaged reward #############################
+######################################################################
+'''
+class RewardAverageGraphBatch():
+    def __init__(self,paths_data=paths_data):
+        for p in paths_data:
+            print('Calculating ' + p + '.')
+            df=Load_Summary(path_data=p).output
+            ave=Average_Episode(dataframe=df,extent=100).output
+            _=Visualize(dataframe=ave,path_data=p)
+        print('Finished batch calculation.')
+'''
+
+######################################################################
 # Data Extraction and saving #########################################
 ######################################################################
-
+'''
 class Extract_Checkpoint():
     def __init__(self,path_data=path_data):
         # Collect summary files
@@ -308,5 +262,6 @@ class Extract_Checkpoint():
         hdf.close()
         self.output.columns=colnames.tolist()
         print('Finished saving data.')
+'''
 
 print('End of file.')

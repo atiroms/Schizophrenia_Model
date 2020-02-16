@@ -244,7 +244,7 @@ class BatchRun():
 
     def run(self):
         for i in range(len(self.batch_table)):
-            print('Running batch: ' + str(i + 1) + '/' + str(len(self.batch_table)),'.')
+            print('Batch run: ' + str(i + 1) + '/' + str(len(self.batch_table)),'.')
             param_overwrite=self.batch_table.loc[i,self.batch_table.columns.difference(['datetime_start','done'])].to_dict()
             param_overwrite['path_save_batch']=self.path_save_batch
             run=Run(path_save=self.path_save_batch,set_param_overwrite=param_overwrite)

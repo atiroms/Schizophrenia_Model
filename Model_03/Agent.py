@@ -288,6 +288,7 @@ class A2C_Agent():
                 #print('episode: ' + str(cnt_episode_global) + ', copy time: ' + str(t_copy) + ', prep time: ' + str(t_prepare) + ', act time: ' + str(t_act) + ', train time: ' + str(t_train) + ', save time: ' + str(t_save) + '.             ', end='\r')
 
                 if cnt_episode_global == self.param.episode_stop:
+                    print('')
                     #print('Reached maximum episode count: '+ str(cnt_episode_global) + '.                           ')
                     break
 
