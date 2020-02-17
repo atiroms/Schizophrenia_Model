@@ -2,7 +2,7 @@
     "//":"Reinforcement learning agent type",
     "agent": "A2C",
 
-    "//":"Number of agents that actin parallel",
+    "//":"Number of agents that act in parallel",
     "n_agents" : 1,
     
     "//":"Number of cells in LSTM-RNN network",

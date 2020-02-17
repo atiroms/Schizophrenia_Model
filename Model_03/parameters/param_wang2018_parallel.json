@@ -3,7 +3,7 @@
     "agent": "A2C",
 
     "//":"Number of agents that act in parallel",
-    "n_agents" : 1,
+    "n_agents" : 4,
     
     "//":"Number of cells in LSTM-RNN network",
     "n_cells_lstm" : 48,
@@ -26,7 +26,7 @@
     "learning_rate" : 0.0007,
 
     "//":"'0.05' in Wang 2018, '0.5' in awjuliani/meta-RL",
-    "cost_statevalue_estimate" : 0.5,
+    "cost_statevalue_estimate" : 0.05,
 
     "//":"'0.05' in Wang 2018 and awjuliani/meta-RL",
     "cost_entropy" : 0.05,
