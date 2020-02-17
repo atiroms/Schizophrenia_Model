@@ -42,6 +42,7 @@ import os
 list_path_code=[
     'D:/atiroms/GitHub/Schizophrenia_Model/Model_03',
     'C:/Users/atiro/GitHub/Schizophrenia_Model/Model_03',
+    '/home/atiroms/GitHub/Schizophrenia_Model/Model_03'
 ]
 for i in range(len(list_path_code)):
     if os.path.exists(list_path_code[i]):
@@ -65,7 +66,7 @@ for i in range(len(list_path_save)):
         raise ValueError('Save folder does not exist in the list.')
 
 import threading
-#import multiprocessingA2
+#import multiprocessing
 import numpy as np
 #import matplotlib.pyplot as plt
 import tensorflow as tf
