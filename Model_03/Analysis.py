@@ -41,7 +41,8 @@ for i in range(len(list_path_data)):
         raise ValueError('Data folder does not exist in the list.')
 
 #dir_data = '20200216_191229'
-dir_data = '20200216_204436'
+#dir_data = '20200216_204436'
+dir_data = '20200216_233234'
 #list_dir_data = ['20200216_003928']
 
 ######################################################################

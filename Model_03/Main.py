@@ -30,7 +30,7 @@ param_batch=[
     #{'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
     #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
     #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
-    {'name': 'n_cells_lstm', 'n':5, 'type':'parametric','method':'grid','min':4,'max':48},
+    {'name': 'n_cells_lstm', 'n':20, 'type':'parametric','method':'grid','min':5,'max':100},
 ]
 
 
