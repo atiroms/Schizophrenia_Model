@@ -42,7 +42,8 @@ for i in range(len(list_path_data)):
 
 #dir_data = '20200216_191229'
 #dir_data = '20200216_204436'
-dir_data = '20200216_233234'
+#dir_data = '20200216_233234'
+dir_data = '20200217_103834'
 #list_dir_data = ['20200216_003928']
 
 ######################################################################
@@ -51,35 +52,121 @@ dir_data = '20200216_233234'
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-#import matplotlib.pyplot as plt
-import plotly as py
-import cufflinks as cf
-import glob
-import os
 import math
+import matplotlib.pyplot as plt
+#import tensorflow as tf
+#import matplotlib.pyplot as plt
+#import plotly as py
+#import cufflinks as cf
+#import glob
 
 
 ######################################################################
-# Data folder configuration ##########################################
+# Batch data analysis ################################################
 ######################################################################
 
+class BatchAnalysis():
+    def __init__(self, path_data=path_data,dir_data=dir_data,subset={}):
+        self.path=os.path.join(path_data,dir_data)
+        self.subset=subset
+
+    def batch_load_reward(self):
+        # Read batch_table
+        with pd.HDFStore(os.path.join(self.path,'batch_table.h5')) as hdf:
+            batch_table = pd.DataFrame(hdf['batch_table'])
+        #batch_table = batch_table.iloc[0:10,:]
+
+        # Subset batch table by keys and values specified in 'subset'
+        if len(self.subset)>0:
+            for key in list(self.subset.keys()):
+                batch_table_subset=batch_table.loc[batch_table[key]==self.subset[key]]
+        else:
+            batch_table_subset=batch_table
+
+        # Read subdirectory using subset of batch table
+        for i in range(len(batch_table_subset)):
+            print('\rLoading ' + str(i+1) + '/' + str(len(batch_table_subset)) + '                 ',end='')
+            subdir=batch_table_subset['datetime_start'].iloc[i]
+            path=self.path + '/' + subdir
+            with pd.HDFStore(path+'/summary/summary.h5') as hdf:
+                summary = pd.DataFrame(hdf['summary'])
+            
+            summary=summary[['episode','reward']].rename(columns={'reward':str(i)})
+            if i == 0:
+                output=summary
+            else:
+                output=pd.merge(output,summary,how='outer', on='episode')
+        print('')
+        #self.df_ave=MovAveEpisode(dataframe=self.summaries).output
+        return(output)
+
+    def block_ave_reward(self,df_reward,window=100):
+        print('Calculating block averages over ' + str(window) + ' episodes.')
+        output=pd.DataFrame(columns=df_reward.columns)
+        for i in range(math.floor(len(df_reward)/window)):
+            output=output.append(df_reward.iloc[i*window:(i+1)*window,:].mean(),ignore_index=True)
+        print('Finished calculating block averages.')
+        return(output)
+
+    def mov_ave_reward(self,df_reward,window=100):
+        print('Calculating moving averages over ' + str(window) + ' episodes.')
+        output=pd.DataFrame(columns=df_reward.columns)
+        for i in range(len(df_reward)-window+1):
+            #print('\rCalculating ' + str(i) + '/' + str(self.length) + '                 ', end='')
+            output=output.append(df_reward.iloc[i:(i+window),:].mean(),ignore_index=True)
+            #self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
+        print('Finished calculating moving averages.')
+        return(output)
+
+    def vis_reward(self,df_reward):
+        #self.path=os.path.join(path_data,dir_data)
+        #self.df_ave=df_ave
+        fig=plt.figure()
+        ax=fig.add_subplot(1,1,1)
+        ax.plot(df_reward['episode'],df_reward.drop('episode',axis=1))
+        #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
+        plt.show()
+
+    def pipe_mov(self):
+        df_batchreward=self.batch_load_reward()
+        df_batchrewardave=self.mov_ave_reward(df_batchreward)
+        self.vis_reward(df_batchrewardave)
+
+    def pipe_block(self):
+        df_batchreward=self.batch_load_reward()
+        df_batchrewardave=self.block_ave_reward(df_batchreward)
+        self.vis_reward(df_batchrewardave)
+
+
+######################################################################
+# Average summary data to smooth for vizualization ###################
+######################################################################
 '''
-class Confirm_Datafolder():
-    def __init__(self,path_data=path_data,path_data_master=path_data_master):
-        for i in range(len(path_data_master)):
-            if os.path.exists(path_data_master[i]):
-                path_data=path_data_master[i]+'/'+path_data
-                break
-            elif i==len(path_data_master)-1:
-                raise ValueError('Save folder does not exist.')
-        self.path_output=path_data
+class MovAveEpisode():
+    def __init__(self,dataframe,window=100,column=[]):
+        self.input=dataframe
+        if len(column)>0:
+            column_selected=['episode']+column
+            self.input=self.input[column_selected]
+        self.window=window
+        self.length=len(self.input)-self.window+1
+        #self.length=math.floor(len(self.input)/self.window)
+        self.calc_movave()
+
+    def calc_movave(self):
+        print('Calculating moving averages over ' + str(self.window) + ' episodes.')
+        self.output=pd.DataFrame(columns=self.input.columns)
+        for i in range(self.length):
+            #print('\rCalculating ' + str(i) + '/' + str(self.length) + '                 ', end='')
+            self.output=self.output.append(self.input.iloc[i:(i+self.window),:].mean(),ignore_index=True)
+            #self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
+        print('Finished calculating moving averages.')
 '''
 
 ######################################################################
 # HDF5 data loading for each type of data ############################
 ######################################################################
-
+'''
 class Load_Activity():
     def __init__(self,path_data=None):
         if path_data is None:
@@ -101,13 +188,58 @@ class Load_Variable():
         self.output = pd.DataFrame(hdf['variable'])
         hdf.close()
         print('Finished hdf5 file loading.')
+'''
+
+
+######################################################################
+# Data folder configuration ##########################################
+######################################################################
+'''
+class Confirm_Datafolder():
+    def __init__(self,path_data=path_data,path_data_master=path_data_master):
+        for i in range(len(path_data_master)):
+            if os.path.exists(path_data_master[i]):
+                path_data=path_data_master[i]+'/'+path_data
+                break
+            elif i==len(path_data_master)-1:
+                raise ValueError('Save folder does not exist.')
+        self.path_output=path_data
+'''
 
 
 ######################################################################
 # Visualization ######################################################
 ######################################################################
+'''
+class RewardAverageGraphBatch():
+    def __init__(self,paths_data=paths_data):
+        for p in paths_data:
+            print('Calculating ' + p + '.')
+            df=Load_Summary(path_data=p).output
+            ave=Average_Episode(dataframe=df,extent=100).output
+            _=Visualize(dataframe=ave,path_data=p)
+        print('Finished batch calculation.')
+'''
+'''
+class VisAve():   
+    def __init__(self,df_ave,path_data=path_data,dir_data=dir_data):
+        self.path=os.path.join(path_data,dir_data)
+        self.df_ave=df_ave
+        fig=plt.figure()
+        ax=fig.add_subplot(1,1,1)
+        ax.plot(self.df_ave['episode'],self.df_ave.drop('episode',axis=1))
+        #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
+        plt.show()
 
-class Visualize():
+        #fig = self.df_ave.iplot(
+        #    kind="scatter", asFigure=True,x='episode', title='Reward - Episode',
+        #    #xTitle='Episode', yTitle='Reward', colors=['blue'])
+        #    xTitle='Episode', yTitle='Reward')
+        ##fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Perf/Reward')
+        #py.offline.plot(fig, filename=self.path + '/Reward.html')
+'''
+'''
+class Vis():
     def __init__(self,dataframe,path_data=path_data,key='reward'):
         self.df=dataframe
         self.path_data=path_data
@@ -125,95 +257,6 @@ class Visualize():
         #fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Perf/Reward')
         py.offline.plot(fig, filename=self.path_data + '/Reward.html')
         print('Generated graph.')
-
-
-######################################################################
-# Average summary data to smooth for vizualization ###################
-######################################################################
-
-class Average_Episode():
-    def __init__(self,dataframe,extent=100,column=[]):
-        self.input=dataframe
-        if len(column)>0:
-            column_selected=['episode']+column
-            self.input=self.input[column_selected]
-        self.extent=extent
-        self.length=len(self.input)-self.extent+1
-        #self.length=math.floor(len(self.input)/self.extent)
-        self.calc_average()
-
-    def calc_average(self):
-        print('Calculating averages over ' + str(self.extent) + ' episodes.')
-        self.output=pd.DataFrame(columns=self.input.columns)
-        for i in range(self.length):
-            #print('\rCalculating ' + str(i) + '/' + str(self.length) + '                 ', end='')
-            self.output=self.output.append(self.input.iloc[i:(i+self.extent),:].mean(),ignore_index=True)
-            #self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
-        print('Finished calculating averages.')
-
-
-######################################################################
-# Batch data analysis ################################################
-######################################################################
-
-class Batch_Average():
-    def __init__(self, path_data=path_data,dir_data=dir_data,subset={}):
-        self.path=os.path.join(path_data,dir_data)
-        self.subset=subset
-
-        # Read batch_table
-        with pd.HDFStore(os.path.join(self.path,'batch_table.h5')) as hdf:
-            self.batch_table = pd.DataFrame(hdf['batch_table'])
-        #self.batch_table = self.batch_table.iloc[0:10,:]
-
-        # subset batch table by keys and values specified in 'subset'
-        if len(subset)>0:
-            for key in list(self.subset.keys()):
-                self.batch_table_subset=self.batch_table.loc[self.batch_table[key]==self.subset[key]]
-        else:
-            self.batch_table_subset=self.batch_table
-
-        # read subdirectory using subset of batch table
-        for i in range(len(self.batch_table_subset)):
-            print('Reading ' + str(i+1) + '/' + str(len(self.batch_table_subset)) + '                 ')
-            subdir=self.batch_table_subset['datetime_start'].iloc[i]
-            path=self.path + '/' + subdir
-            with pd.HDFStore(path+'/summary/summary.h5') as hdf:
-                summary = pd.DataFrame(hdf['summary'])
-            
-            summary=summary[['episode','reward']].rename(columns={'reward':str(i)})
-            if i == 0:
-                self.summaries=summary
-            else:
-                self.summaries=pd.merge(self.summaries,summary,how='outer', on='episode')
-
-        self.averages=Average_Episode(dataframe=self.summaries).output
-
-
-class Visualize_Averages():   
-    def __init__(self,averages,path_data=path_data,dir_data=dir_data):
-        self.path=os.path.join(path_data,dir_data)
-        self.averages=averages
-        fig = self.averages.iplot(
-            kind="scatter", asFigure=True,x='episode', title='Reward - Episode',
-            #xTitle='Episode', yTitle='Reward', colors=['blue'])
-            xTitle='Episode', yTitle='Reward')
-        #fig = df.iplot(kind="scatter",  asFigure=True,x='Simulation/Global Episode Count', y='Perf/Reward')
-        py.offline.plot(fig, filename=self.path + '/Reward.html')
-
-
-######################################################################
-# Batch visualization of averaged reward #############################
-######################################################################
-'''
-class RewardAverageGraphBatch():
-    def __init__(self,paths_data=paths_data):
-        for p in paths_data:
-            print('Calculating ' + p + '.')
-            df=Load_Summary(path_data=p).output
-            ave=Average_Episode(dataframe=df,extent=100).output
-            _=Visualize(dataframe=ave,path_data=p)
-        print('Finished batch calculation.')
 '''
 
 ######################################################################

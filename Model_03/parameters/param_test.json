@@ -9,7 +9,7 @@
     "path_load" : "./saved_data/20180917_011631",
 
     "//":"Number of episodes to run: '100','50000','200000'",
-    "episode_stop" : 500,
+    "episode_stop" : 1000,
 
     "//":"Interval to save simulation summary in original format: '1', '100'",
     "interval_summary":1,
