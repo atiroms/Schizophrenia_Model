@@ -16,8 +16,8 @@ For batch runs,
 # Parameters #########################################################
 ######################################################################
 
-#set_param_sim='param_sim.json'
-set_param_sim='param_test.json'
+set_param_sim='param_sim.json'
+#set_param_sim='param_test.json'
 set_param_mod='param_wang2018.json'
 #set_param_mod='param_wang2018_parallel.json'
 
