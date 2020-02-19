@@ -54,6 +54,7 @@ import numpy as np
 import pandas as pd
 import math
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 #import tensorflow as tf
 #import matplotlib.pyplot as plt
 #import plotly as py
@@ -73,20 +74,36 @@ class BatchAnalysis():
     def batch_load_reward(self):
         # Read batch_table
         with pd.HDFStore(os.path.join(self.path,'batch_table.h5')) as hdf:
-            batch_table = pd.DataFrame(hdf['batch_table'])
-        #batch_table = batch_table.iloc[0:10,:]
+            df_batch = pd.DataFrame(hdf['batch_table'])
+        #df_batch = df_batch.iloc[0:10,:]
+        self.df_batch=df_batch
 
         # Subset batch table by keys and values specified in 'subset'
         if len(self.subset)>0:
             for key in list(self.subset.keys()):
-                batch_table_subset=batch_table.loc[batch_table[key]==self.subset[key]]
+                df_batch_subset=df_batch.loc[df_batch[key]==self.subset[key]]
         else:
-            batch_table_subset=batch_table
+            df_batch_subset=df_batch
+        column_batchlabel=df_batch_subset.columns.tolist()
+        for column in ['datetime_start','done']:
+            column_batchlabel.remove(column)
+
+        self.n_batch=len(df_batch_subset)
+        label_batch=['']*self.n_batch
+        for column in column_batchlabel:
+            if label_batch[0]=='':
+                label_batch=[str(b) for b in df_batch_subset[column].tolist()]
+                title_batch=column
+            else:
+                label_batch=[a+'_'+str(b) for a,b in zip(label_batch,df_batch_subset[column].tolist())]
+                title_batch=title_batch+'_'+column
+        self.label_batch=label_batch
+        self.title_batch=title_batch
 
         # Read subdirectory using subset of batch table
-        for i in range(len(batch_table_subset)):
-            print('\rLoading ' + str(i+1) + '/' + str(len(batch_table_subset)) + '                 ',end='')
-            subdir=batch_table_subset['datetime_start'].iloc[i]
+        for i in range(self.n_batch):
+            print('\rLoading ' + str(i+1) + '/' + str(self.n_batch) + '                 ',end='')
+            subdir=df_batch_subset['datetime_start'].iloc[i]
             path=self.path + '/' + subdir
             with pd.HDFStore(path+'/summary/summary.h5') as hdf:
                 summary = pd.DataFrame(hdf['summary'])
@@ -101,41 +118,77 @@ class BatchAnalysis():
         return(output)
 
     def block_ave_reward(self,df_reward,window=100):
+        self.win_ave=window
         print('Calculating block averages over ' + str(window) + ' episodes.')
-        output=pd.DataFrame(columns=df_reward.columns)
+        output=pd.DataFrame(columns=['episode_start','episode_stop']+df_reward.columns.tolist())
         for i in range(math.floor(len(df_reward)/window)):
-            output=output.append(df_reward.iloc[i*window:(i+1)*window,:].mean(),ignore_index=True)
+            output=output.append(pd.concat([pd.Series([i*window,(i+1)*window-1],index=['episode_start','episode_stop']),
+                                            df_reward.iloc[i*window:(i+1)*window,:].mean()]),ignore_index=True)
         print('Finished calculating block averages.')
         return(output)
 
     def mov_ave_reward(self,df_reward,window=100):
+        self.win_ave=window
         print('Calculating moving averages over ' + str(window) + ' episodes.')
-        output=pd.DataFrame(columns=df_reward.columns)
+        output=pd.DataFrame(columns=['episode_start','episode_stop']+df_reward.columns.tolist())
         for i in range(len(df_reward)-window+1):
-            #print('\rCalculating ' + str(i) + '/' + str(self.length) + '                 ', end='')
-            output=output.append(df_reward.iloc[i:(i+window),:].mean(),ignore_index=True)
+            output=output.append(pd.concat([pd.Series([i,i+window-1],index=['episode_start','episode_stop']),
+                                            df_reward.iloc[i:(i+window),:].mean()]),ignore_index=True)
             #self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
         print('Finished calculating moving averages.')
         return(output)
 
-    def vis_reward(self,df_reward):
+    def heatmap_reward(self,df_reward):
         #self.path=os.path.join(path_data,dir_data)
         #self.df_ave=df_ave
-        fig=plt.figure()
+        df_plot=df_reward.drop(['episode','episode_start','episode_stop'],axis=1).T
+        fig=plt.figure(figsize=(8,6),dpi=100)
         ax=fig.add_subplot(1,1,1)
-        ax.plot(df_reward['episode'],df_reward.drop('episode',axis=1))
+        heatmap=ax.pcolor(df_plot,cmap=cm.rainbow)
+        ax.set_xticks(np.arange(df_plot.shape[1]), minor=False)
+        ax.set_yticks(np.arange(df_plot.shape[0]) + 0.5, minor=False)
+        ax.invert_yaxis()
+        ax.set_xticklabels([str(int(i)) for i in df_reward['episode_start'].tolist()], minor=False)
+        ax.set_yticklabels(self.label_batch, minor=False)
+        ax.set_title("Average reward over "+str(self.win_ave)+" episodes")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Batch ("+self.title_batch+")")
+        cbar=fig.colorbar(heatmap,ax=ax)
+        cbar.set_label('Average reward')
+        plt.tight_layout()
+        plt.show()
+
+    def plot_reward(self,df_reward):
+        #self.path=os.path.join(path_data,dir_data)
+        #self.df_ave=df_ave
+        fig=plt.figure(figsize=(8,6),dpi=100)
+        ax=fig.add_subplot(1,1,1)
+        for i in range(self.n_batch):
+            ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
+                    color=cm.rainbow(i/self.n_batch))
+        ax.set_title("Average reward over "+str(self.win_ave)+" episodes")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Average reward")
+        ax.legend(title=self.title_batch,labels=self.label_batch,
+                  bbox_to_anchor=(1.05,1),loc='upper left')
         #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
+        plt.tight_layout()
         plt.show()
 
     def pipe_mov(self):
         df_batchreward=self.batch_load_reward()
         df_batchrewardave=self.mov_ave_reward(df_batchreward)
-        self.vis_reward(df_batchrewardave)
+        self.plot_reward(df_batchrewardave)
 
     def pipe_block(self):
         df_batchreward=self.batch_load_reward()
         df_batchrewardave=self.block_ave_reward(df_batchreward)
-        self.vis_reward(df_batchrewardave)
+        self.plot_reward(df_batchrewardave)
+
+    def pipe_heatmap(self):
+        df_batchreward=self.batch_load_reward()
+        df_batchrewardave=self.block_ave_reward(df_batchreward)
+        self.heatmap_reward(df_batchrewardave)
 
 
 ######################################################################
