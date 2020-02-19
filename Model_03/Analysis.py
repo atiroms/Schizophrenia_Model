@@ -57,6 +57,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from tqdm import tqdm
 from time import sleep
+import datetime
 #import tensorflow as tf
 #import matplotlib.pyplot as plt
 #import plotly as py
@@ -71,7 +72,10 @@ from time import sleep
 class BatchAnalysis():
     def __init__(self, path_data=path_data,dir_data=dir_data,subset={}):
         self.path=os.path.join(path_data,dir_data)
+        self.path_analysis=os.path.join(self.path,"analysis")
         self.subset=subset
+        if not os.path.exists(self.path_analysis):
+            os.makedirs(self.path_analysis)
 
     def batch_load_reward(self):
         # Read batch_table
@@ -165,6 +169,8 @@ class BatchAnalysis():
         cbar=fig.colorbar(heatmap,ax=ax)
         cbar.set_label('Average reward')
         plt.tight_layout()
+        plt.savefig(os.path.join(self.path_analysis,
+                                 "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'.png'))
         plt.show()
 
     def plot_reward(self,df_reward):
@@ -182,6 +188,8 @@ class BatchAnalysis():
                   bbox_to_anchor=(1.05,1),loc='upper left')
         #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
         plt.tight_layout()
+        plt.savefig(os.path.join(self.path_analysis,
+                                 "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'.png'))
         plt.show()
 
     def pipe_mov(self):
