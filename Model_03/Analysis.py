@@ -42,8 +42,8 @@ for i in range(len(list_path_data)):
 
 #dir_data = '20200216_191229'
 #dir_data = '20200216_204436'
-#dir_data = '20200216_233234'
-dir_data = '20200217_103834'
+dir_data = '20200216_233234'
+#dir_data = '20200217_103834'
 #list_dir_data = ['20200216_003928']
 
 ######################################################################
@@ -55,6 +55,8 @@ import pandas as pd
 import math
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+from tqdm import tqdm
+from time import sleep
 #import tensorflow as tf
 #import matplotlib.pyplot as plt
 #import plotly as py
@@ -101,8 +103,10 @@ class BatchAnalysis():
         self.title_batch=title_batch
 
         # Read subdirectory using subset of batch table
-        for i in range(self.n_batch):
-            print('\rLoading ' + str(i+1) + '/' + str(self.n_batch) + '                 ',end='')
+        print('Loading data.')
+        sleep(1)
+        for i in tqdm(range(self.n_batch)):
+            #print('\rLoading ' + str(i+1) + '/' + str(self.n_batch) + '                 ',end='')
             subdir=df_batch_subset['datetime_start'].iloc[i]
             path=self.path + '/' + subdir
             with pd.HDFStore(path+'/summary/summary.h5') as hdf:
@@ -113,15 +117,16 @@ class BatchAnalysis():
                 output=summary
             else:
                 output=pd.merge(output,summary,how='outer', on='episode')
-        print('')
+        print('Finished loading data.')
         #self.df_ave=MovAveEpisode(dataframe=self.summaries).output
         return(output)
 
     def block_ave_reward(self,df_reward,window=100):
         self.win_ave=window
         print('Calculating block averages over ' + str(window) + ' episodes.')
+        sleep(1)
         output=pd.DataFrame(columns=['episode_start','episode_stop']+df_reward.columns.tolist())
-        for i in range(math.floor(len(df_reward)/window)):
+        for i in tqdm(range(math.floor(len(df_reward)/window))):
             output=output.append(pd.concat([pd.Series([i*window,(i+1)*window-1],index=['episode_start','episode_stop']),
                                             df_reward.iloc[i*window:(i+1)*window,:].mean()]),ignore_index=True)
         print('Finished calculating block averages.')
@@ -130,8 +135,9 @@ class BatchAnalysis():
     def mov_ave_reward(self,df_reward,window=100):
         self.win_ave=window
         print('Calculating moving averages over ' + str(window) + ' episodes.')
+        sleep(1)
         output=pd.DataFrame(columns=['episode_start','episode_stop']+df_reward.columns.tolist())
-        for i in range(len(df_reward)-window+1):
+        for i in tqdm(range(len(df_reward)-window+1)):
             output=output.append(pd.concat([pd.Series([i,i+window-1],index=['episode_start','episode_stop']),
                                             df_reward.iloc[i:(i+window),:].mean()]),ignore_index=True)
             #self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
@@ -142,13 +148,16 @@ class BatchAnalysis():
         #self.path=os.path.join(path_data,dir_data)
         #self.df_ave=df_ave
         df_plot=df_reward.drop(['episode','episode_start','episode_stop'],axis=1).T
-        fig=plt.figure(figsize=(8,6),dpi=100)
+        df_plot.columns=df_reward['episode_start'].tolist()
+        df_plot.index=self.label_batch
+        self.df_plot=df_plot
+        fig=plt.figure(figsize=(6,4),dpi=100)
         ax=fig.add_subplot(1,1,1)
-        heatmap=ax.pcolor(df_plot,cmap=cm.rainbow)
-        ax.set_xticks(np.arange(df_plot.shape[1]), minor=False)
+        heatmap=ax.pcolor(df_reward['episode_start'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow)
+        #ax.set_xticks(np.arange(df_plot.shape[1]), minor=False)
         ax.set_yticks(np.arange(df_plot.shape[0]) + 0.5, minor=False)
         ax.invert_yaxis()
-        ax.set_xticklabels([str(int(i)) for i in df_reward['episode_start'].tolist()], minor=False)
+        #ax.set_xticklabels([str(int(i)) for i in df_reward['episode_start'].tolist()], minor=False)
         ax.set_yticklabels(self.label_batch, minor=False)
         ax.set_title("Average reward over "+str(self.win_ave)+" episodes")
         ax.set_xlabel("Episode")
@@ -161,7 +170,7 @@ class BatchAnalysis():
     def plot_reward(self,df_reward):
         #self.path=os.path.join(path_data,dir_data)
         #self.df_ave=df_ave
-        fig=plt.figure(figsize=(8,6),dpi=100)
+        fig=plt.figure(figsize=(6,4),dpi=100)
         ax=fig.add_subplot(1,1,1)
         for i in range(self.n_batch):
             ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
