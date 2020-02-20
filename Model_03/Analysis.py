@@ -42,10 +42,11 @@ for i in range(len(list_path_data)):
 
 #dir_data = '20200216_191229'
 #dir_data = '20200216_204436'
-#dir_data = '20200216_233234'
+#dir_data = '20200216_233234' # n_lstm_cell 4, 15, ... 48
 #dir_data = '20200217_103834'
-dir_data='20200218_212228'
-#list_dir_data = ['20200216_003928']
+dir_data='20200218_212228' # n_lstm_cell 5, 10, ... 100
+#dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019 (0.0019 failed)
+#dir_data='20200220_230830' # learning_rate 0.0020, 0.0025, ... 0.0100
 
 ######################################################################
 # Libraries ##########################################################
@@ -60,7 +61,6 @@ from tqdm import tqdm
 from time import sleep
 import datetime
 #import tensorflow as tf
-#import matplotlib.pyplot as plt
 #import plotly as py
 #import cufflinks as cf
 #import glob
@@ -74,9 +74,9 @@ class BatchAnalysis():
     def __init__(self, path_data=path_data,dir_data=dir_data,subset={}):
         self.path=os.path.join(path_data,dir_data)
         self.path_analysis=os.path.join(self.path,"analysis")
-        self.subset=subset
         if not os.path.exists(self.path_analysis):
             os.makedirs(self.path_analysis)
+        self.subset=subset
 
     def batch_load_reward(self):
         # Read batch_table
@@ -149,6 +149,44 @@ class BatchAnalysis():
         print('Finished calculating moving averages.')
         return(output)
 
+    def state_reward(self,df_reward,threshold=[65,67.5]):
+        self.thresh_reward=threshold
+        print('Calculating disease states.')
+        sleep(1)
+        col_batch=df_reward.drop(['episode','episode_start','episode_stop'],axis=1).columns.tolist()
+        # State at each episode, 0: unlearned, 1: learned 2: psychotic 3: remitted
+        df_state=pd.DataFrame(0,columns=col_batch,index=df_reward.index).astype(int)
+        # State history, -1: never learned, 0: has learned, >1: N psychotic episodes
+        df_count=pd.DataFrame(-1,columns=col_batch,index=df_reward.index).astype(int)
+        #sr_state=pd.Series(-1,index=col_batch).astype(int)
+        for i in tqdm(range(1,len(df_reward))):
+            for col in col_batch:
+                if df_reward.loc[i,col]<threshold[0]:                           # Currently below threshold
+                    if df_state.loc[i-1,col]==0 or df_state.loc[i-1,col]==2:    # Stayed below threshold
+                        df_state.loc[i,col]=df_state.loc[i-1,col]                  # No change
+                        df_count.loc[i,col]=df_count.loc[i-1,col]
+                    else:                                                       # Fell below threshold
+                        df_state.loc[i,col]=2                                      # Fall psychotic                   
+                        df_count.loc[i,col]=df_count.loc[i-1,col]+1                # Count up psychosis
+                elif df_reward.loc[i,col]>=threshold[1]:                        # Currently above threshold
+                    if df_state.loc[i-1,col]==0 or df_state.loc[i-1,col]==2:    # Climbed above threshold
+                        if df_count.loc[i-1,col]==-1:                                   # Learned for the first time
+                            df_state.loc[i,col]=1
+                            df_count.loc[i,col]=0
+                        else:                                                   # Remitted
+                            df_state.loc[i,col]=3
+                            df_count.loc[i,col]=df_count.loc[i-1,col]
+                    else:                                                       # Stayed above threshold
+                        df_state.loc[i,col]=df_state.loc[i-1,col]                  # No change
+                        df_count.loc[i,col]=df_count.loc[i-1,col]
+                else:                                                           # Currently gray zone
+                    df_state.loc[i,col]=df_state.loc[i-1,col]                      # No change
+                    df_count.loc[i,col]=df_count.loc[i-1,col]
+        df_state=pd.concat([df_reward[['episode_start','episode_stop','episode']],df_state],axis=1)
+        df_count=pd.concat([df_reward[['episode_start','episode_stop','episode']],df_count],axis=1)
+        print('Finished calculating disease states')
+        return([df_state,df_count])
+
     def heatmap_reward(self,df_reward):
         #self.path=os.path.join(path_data,dir_data)
         #self.df_ave=df_ave
@@ -171,41 +209,88 @@ class BatchAnalysis():
         cbar.set_label('Average reward')
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_analysis,
-                                 "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'.png'))
+                                 "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_heatmap.png'))
         plt.show()
 
     def plot_reward(self,df_reward):
         #self.path=os.path.join(path_data,dir_data)
         #self.df_ave=df_ave
-        fig=plt.figure(figsize=(6,4),dpi=100)
+        fig=plt.figure(figsize=(6,6),dpi=100)
         ax=fig.add_subplot(1,1,1)
         for i in range(self.n_batch):
             ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
                     color=cm.rainbow(i/self.n_batch))
         ax.set_title("Average reward over "+str(self.win_ave)+" episodes")
-        ax.set_xlabel("Episode")
-        ax.set_ylabel("Average reward")
+        ax.set_xlabel("Task episode")
+        ax.set_ylabel("Reward")
         ax.legend(title=self.title_batch,labels=self.label_batch,
                   bbox_to_anchor=(1.05,1),loc='upper left')
         #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_analysis,
-                                 "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'.png'))
+                                 "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_reward.png'))
         plt.show()
 
-    def pipe_mov(self):
+    def plot_state(self,df_state):
+        fig=plt.figure(figsize=(6,6),dpi=100)
+        ax=fig.add_subplot(1,1,1)
+        for i in range(self.n_batch):
+            ax.plot(df_state['episode'],df_state.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
+                    color=cm.rainbow(i/self.n_batch))
+        ax.set_yticks([0,1,2,3], minor=False)
+        ax.set_yticklabels(['unlearned','learned','psychotic','remitted'], minor=False)
+        ax.set_title("Disease state transision")
+        ax.set_xlabel("Task episode")
+        ax.set_ylabel("State")
+        ax.legend(title=self.title_batch,labels=self.label_batch,
+                  bbox_to_anchor=(1.05,1),loc='upper left')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.path_analysis,
+                                 "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_state.png'))
+        plt.show()
+
+    def plot_count(self,df_count):
+        fig=plt.figure(figsize=(6,6),dpi=100)
+        ax=fig.add_subplot(1,1,1)
+        for i in range(self.n_batch):
+            ax.plot(df_count['episode'],df_count.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
+                    color=cm.rainbow(i/self.n_batch))
+        ax.set_title("Count of psychotic episodes")
+        ax.set_xlabel("Task episode")
+        ax.set_ylabel("Count of psychotic episodes")
+        ax.legend(title=self.title_batch,labels=self.label_batch,
+                  bbox_to_anchor=(1.05,1),loc='upper left')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.path_analysis,
+                                 "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_count.png'))
+        plt.show()
+
+    def pipe_state(self,window=1000):
         df_batchreward=self.batch_load_reward()
-        df_batchrewardave=self.mov_ave_reward(df_batchreward)
+        df_batchrewardave=self.mov_ave_reward(df_batchreward,window=window)
+        data_state=self.state_reward(df_batchrewardave)
+        self.plot_reward(df_batchrewardave)
+        self.plot_state(data_state[0])
+        self.plot_count(data_state[1])
+
+    def pipe_mov(self,window=1000):
+        df_batchreward=self.batch_load_reward()
+        df_batchrewardave=self.mov_ave_reward(df_batchreward,window=window)
         self.plot_reward(df_batchrewardave)
 
-    def pipe_block(self):
+    def pipe_block(self,window=100):
         df_batchreward=self.batch_load_reward()
-        df_batchrewardave=self.block_ave_reward(df_batchreward)
+        df_batchrewardave=self.block_ave_reward(df_batchreward,window=window)
         self.plot_reward(df_batchrewardave)
 
-    def pipe_heatmap(self):
+    def pipe_hm_mov(self,window=100):
         df_batchreward=self.batch_load_reward()
-        df_batchrewardave=self.block_ave_reward(df_batchreward)
+        df_batchrewardave=self.mov_ave_reward(df_batchreward,window=window)
+        self.heatmap_reward(df_batchrewardave)
+
+    def pipe_hm_block(self,window=100):
+        df_batchreward=self.batch_load_reward()
+        df_batchrewardave=self.block_ave_reward(df_batchreward,window=window)
         self.heatmap_reward(df_batchrewardave)
 
 
