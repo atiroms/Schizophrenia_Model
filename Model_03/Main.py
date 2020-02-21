@@ -16,12 +16,14 @@ For batch simulations,
 # Parameters #########################################################
 ######################################################################
 
-set_param_sim='param_sim.json'
-#set_param_sim='param_test.json'
+#set_param_sim='param_sim.json'
+set_param_sim='param_test.json'
 set_param_mod='param_wang2018.json'
 #set_param_mod='param_wang2018_parallel.json'
 
-dir_restart='20200219_223846'
+#dir_restart='20200219_223846'
+dir_restart='20200221_234851'
+#dir_restart=None
 
 param_batch=[
     #{'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}

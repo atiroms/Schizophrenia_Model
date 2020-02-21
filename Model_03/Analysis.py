@@ -44,9 +44,10 @@ for i in range(len(list_path_data)):
 #dir_data = '20200216_204436'
 #dir_data = '20200216_233234' # n_lstm_cell 4, 15, ... 48
 #dir_data = '20200217_103834'
-dir_data='20200218_212228' # n_lstm_cell 5, 10, ... 100
-#dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019 (0.0019 failed)
+#dir_data='20200218_212228' # n_lstm_cell 5, 10, ... 100
+dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019
 #dir_data='20200220_230830' # learning_rate 0.0020, 0.0025, ... 0.0100
+#dir_data='20200221_234851' # test run
 
 ######################################################################
 # Libraries ##########################################################
@@ -217,7 +218,7 @@ class BatchAnalysis():
     def plot_reward(self,df_reward):
         #self.path=os.path.join(path_data,dir_data)
         #self.df_ave=df_ave
-        fig=plt.figure(figsize=(6,6),dpi=100)
+        fig=plt.figure(figsize=(6,4),dpi=100)
         ax=fig.add_subplot(1,1,1)
         for i in range(self.n_batch):
             ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
@@ -234,7 +235,7 @@ class BatchAnalysis():
         plt.show()
 
     def plot_state(self,df_state):
-        fig=plt.figure(figsize=(6,6),dpi=100)
+        fig=plt.figure(figsize=(6,4),dpi=100)
         ax=fig.add_subplot(1,1,1)
         for i in range(self.n_batch):
             ax.plot(df_state['episode'],df_state.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
@@ -252,7 +253,7 @@ class BatchAnalysis():
         plt.show()
 
     def plot_count(self,df_count):
-        fig=plt.figure(figsize=(6,6),dpi=100)
+        fig=plt.figure(figsize=(6,4),dpi=100)
         ax=fig.add_subplot(1,1,1)
         for i in range(self.n_batch):
             ax.plot(df_count['episode'],df_count.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
