@@ -3,11 +3,11 @@
 ######################################################################
 '''
 Python code for meta reinforcement learning
-For a single run,
-  run=Run()
-  run.run()
-For batch runs,
-  batch=BatchRun()
+For a single simulation,
+  sim=Sim()
+  sim.run()
+For batch simulations,
+  batch=Batch()
   batch.run()
 '''
 
@@ -20,6 +20,8 @@ set_param_sim='param_sim.json'
 #set_param_sim='param_test.json'
 set_param_mod='param_wang2018.json'
 #set_param_mod='param_wang2018_parallel.json'
+
+dir_restart='20200219_223846'
 
 param_batch=[
     #{'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}
@@ -108,7 +110,7 @@ class Parameters():
 # Single run of simulation ###########################################
 ######################################################################
 
-class Run():
+class Sim():
     #def __init__(self,param_basic=param_basic,param_change=None):
     def __init__(self,set_param_sim=set_param_sim,set_param_mod=set_param_mod,
                  set_param_overwrite=None,
@@ -192,9 +194,30 @@ class Run():
 # Batch run of simulations ###########################################
 ######################################################################
 
-class BatchRun():
-    def __init__(self,param_batch=param_batch,
-                 path_save=path_save):
+class Batch():
+    def __init__(self,param_batch=param_batch,path_save=path_save,
+                 dir_restart=dir_restart):
+        if dir_restart is None:
+            self.prep(param_batch=param_batch,path_save=path_save)
+        else:
+            self.prep_restart(dir_restart=dir_restart,path_save=path_save)
+
+    def prep_restart(self,dir_restart,path_save):
+        self.path_save_batch=os.path.join(path_save,dir_restart)
+        if os.path.exists(os.path.join(self.path_save_batch,"batch_table.h5")):
+            with pd.HDFStore(os.path.join(self.path_save_batch,"batch_table.h5")) as hdf:
+                self.batch_table = pd.DataFrame(hdf['batch_table'])
+            list_idx_rerun=self.batch_table.loc[self.batch_table['done']==False,:].index.values.tolist()
+        print('Unfinished runs: '+str(len(list_idx_rerun))+'.')
+        for i in list_idx_rerun:
+            sr_append=self.batch_table.loc[i,:]
+            sr_append['datetime_start']=np.NaN
+            sr_append['done']=False
+            self.batch_table=self.batch_table.append(sr_append)
+        self.batch_table=self.batch_table.reset_index(drop=True)
+        self.save_batch_table()
+
+    def prep(self,param_batch=param_batch,path_save=path_save):
         self.n_param=len(param_batch)
         # Timestamping directory name
         datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
@@ -248,17 +271,21 @@ class BatchRun():
         print('Done batch setup.')
 
     def run(self):
-        for i in range(len(self.batch_table)):
-            print('Batch run: ' + str(i + 1) + '/' + str(len(self.batch_table)),'.')
-            param_overwrite=self.batch_table.loc[i,self.batch_table.columns.difference(['datetime_start','done'])].to_dict()
+        batch_table_run=self.batch_table.loc[self.batch_table['datetime_start'].isnull(),:]
+        #for i in range(len(self.batch_table)):
+        list_idx_run=batch_table_run.index.values.tolist()
+        for i in range(len(list_idx_run)):
+            idx=list_idx_run[i]
+            print('Batch simulation: ' + str(i + 1) + '/' + str(len(list_idx_run)),'.')
+            param_overwrite=self.batch_table.loc[idx,self.batch_table.columns.difference(['datetime_start','done'])].to_dict()
             param_overwrite['path_save_batch']=self.path_save_batch
-            run=Run(path_save=self.path_save_batch,set_param_overwrite=param_overwrite)
-            self.batch_table.loc[i,'datetime_start']=run.param.datetime_start
+            sim=Sim(path_save=self.path_save_batch,set_param_overwrite=param_overwrite)
+            self.batch_table.loc[idx,'datetime_start']=sim.param.datetime_start
             self.save_batch_table()
-            run.run()
-            self.batch_table.loc[i,'done']=True
+            sim.run()
+            self.batch_table.loc[idx,'done']=True
             self.save_batch_table()
-        print('Done batch run.')
+        print('Done batch simulation.')
 
     def save_batch_table(self):
         hdf=pd.HDFStore(self.path_save_batch+'/batch_table.h5')

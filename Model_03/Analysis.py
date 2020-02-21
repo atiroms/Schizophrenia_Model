@@ -83,6 +83,7 @@ class BatchAnalysis():
         with pd.HDFStore(os.path.join(self.path,'batch_table.h5')) as hdf:
             df_batch = pd.DataFrame(hdf['batch_table'])
         #df_batch = df_batch.iloc[0:10,:]
+        df_batch=df_batch.loc[df_batch['done']==True,:]
         self.df_batch=df_batch
 
         # Subset batch table by keys and values specified in 'subset'
