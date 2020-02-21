@@ -207,15 +207,19 @@ class Batch():
         if os.path.exists(os.path.join(self.path_save_batch,"batch_table.h5")):
             with pd.HDFStore(os.path.join(self.path_save_batch,"batch_table.h5")) as hdf:
                 self.batch_table = pd.DataFrame(hdf['batch_table'])
+            self.batch_table.loc[:,'run']=False
             list_idx_rerun=self.batch_table.loc[self.batch_table['done']==False,:].index.values.tolist()
-        print('Unfinished runs: '+str(len(list_idx_rerun))+'.')
-        for i in list_idx_rerun:
-            sr_append=self.batch_table.loc[i,:]
-            sr_append['datetime_start']=np.NaN
-            sr_append['done']=False
-            self.batch_table=self.batch_table.append(sr_append)
-        self.batch_table=self.batch_table.reset_index(drop=True)
-        self.save_batch_table()
+            print('Unfinished runs: '+str(len(list_idx_rerun))+'.')
+            for i in list_idx_rerun:
+                sr_append=self.batch_table.loc[i,:]
+                sr_append['datetime_start']=np.NaN
+                sr_append['run']=True
+                sr_append['done']=False
+                self.batch_table=self.batch_table.append(sr_append)
+            self.batch_table=self.batch_table.reset_index(drop=True)
+            self.save_batch_table()
+        else:
+            print('dir_restart not found: '+dir_restart)
 
     def prep(self,param_batch=param_batch,path_save=path_save):
         self.n_param=len(param_batch)
@@ -262,6 +266,7 @@ class Batch():
             batch_count += 1
 
         self.batch_table.loc[:,'datetime_start']=np.NaN
+        self.batch_table.loc[:,'run']=True
         self.batch_table.loc[:,'done']=False
         self.save_batch_table()
 
@@ -271,13 +276,13 @@ class Batch():
         print('Done batch setup.')
 
     def run(self):
-        batch_table_run=self.batch_table.loc[self.batch_table['datetime_start'].isnull(),:]
+        batch_table_run=self.batch_table.loc[self.batch_table['run']==True,:]
         #for i in range(len(self.batch_table)):
         list_idx_run=batch_table_run.index.values.tolist()
         for i in range(len(list_idx_run)):
             idx=list_idx_run[i]
             print('Batch simulation: ' + str(i + 1) + '/' + str(len(list_idx_run)),'.')
-            param_overwrite=self.batch_table.loc[idx,self.batch_table.columns.difference(['datetime_start','done'])].to_dict()
+            param_overwrite=self.batch_table.loc[idx,self.batch_table.columns.difference(['datetime_start','run','done'])].to_dict()
             param_overwrite['path_save_batch']=self.path_save_batch
             sim=Sim(path_save=self.path_save_batch,set_param_overwrite=param_overwrite)
             self.batch_table.loc[idx,'datetime_start']=sim.param.datetime_start

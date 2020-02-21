@@ -93,8 +93,9 @@ class BatchAnalysis():
         else:
             df_batch_subset=df_batch
         column_batchlabel=df_batch_subset.columns.tolist()
-        for column in ['datetime_start','done']:
-            column_batchlabel.remove(column)
+        for column in ['datetime_start','run','done']:
+            if column in column_batchlabel:
+                column_batchlabel.remove(column)
 
         self.n_batch=len(df_batch_subset)
         label_batch=['']*self.n_batch
