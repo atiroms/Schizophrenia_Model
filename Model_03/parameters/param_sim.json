@@ -4,10 +4,6 @@
     
     "train" : 1,
 
-    "load_model" : 0,
-
-    "path_load" : "./saved_data/20180917_011631",
-
     "//":"Number of episodes to run: '100','50000','200000'",
     "episode_stop" : 50000,
 
@@ -15,7 +11,7 @@
     "interval_summary":1,
 
     "//":"Interval to save network parameters in tf default format: '100','1000'",
-    "interval_ckpt": 100,
+    "interval_ckpt": 1000,
 
     "//":"Interval to save task pictures: '0','100'",
     "interval_pic": 0,

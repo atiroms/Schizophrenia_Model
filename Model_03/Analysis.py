@@ -45,9 +45,13 @@ for i in range(len(list_path_data)):
 #dir_data = '20200216_233234' # n_lstm_cell 4, 15, ... 48
 #dir_data = '20200217_103834'
 #dir_data='20200218_212228' # n_lstm_cell 5, 10, ... 100
-dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019
+#dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019
 #dir_data='20200220_230830' # learning_rate 0.0020, 0.0025, ... 0.0100
 #dir_data='20200221_234851' # test run
+#dir_data='20200222_002120' # three long runs (200000)
+#dir_data='20200222_214653' # test loading with multiple learning rates
+dir_data='20200222_232008' # test loading with fixed learning rate
+
 
 ######################################################################
 # Libraries ##########################################################
@@ -99,13 +103,17 @@ class BatchAnalysis():
                 column_batchlabel.remove(column)
 
         self.n_batch=len(df_batch_subset)
-        label_batch=['']*self.n_batch
+        label_batch=None
         for column in column_batchlabel:
-            if label_batch[0]=='':
-                label_batch=[str(b) for b in df_batch_subset[column].tolist()]
+            if max(df_batch_subset[column].tolist())>1:
+                regex='{0:.0f}'
+            else:
+                regex='{:.4f}'
+            if label_batch is None:
+                label_batch=[regex.format(b) for b in df_batch_subset[column].tolist()]
                 title_batch=column
             else:
-                label_batch=[a+'_'+str(b) for a,b in zip(label_batch,df_batch_subset[column].tolist())]
+                label_batch=[a+'_'+regex.format(b) for a,b in zip(label_batch,df_batch_subset[column].tolist())]
                 title_batch=title_batch+'_'+column
         self.label_batch=label_batch
         self.title_batch=title_batch
@@ -206,7 +214,7 @@ class BatchAnalysis():
         #ax.set_xticklabels([str(int(i)) for i in df_reward['episode_start'].tolist()], minor=False)
         ax.set_yticklabels(self.label_batch, minor=False)
         ax.set_title("Average reward over "+str(self.win_ave)+" episodes")
-        ax.set_xlabel("Episode")
+        ax.set_xlabel("Task episode")
         ax.set_ylabel("Batch ("+self.title_batch+")")
         cbar=fig.colorbar(heatmap,ax=ax)
         cbar.set_label('Average reward')

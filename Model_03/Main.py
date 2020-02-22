@@ -16,28 +16,33 @@ For batch simulations,
 # Parameters #########################################################
 ######################################################################
 
-#set_param_sim='param_sim.json'
-set_param_sim='param_sim_long.json'
+set_param_sim='param_sim.json'
+#set_param_sim='param_sim_long.json'
 #set_param_sim='param_test.json'
+#set_param_sim='param_test_load.json'
+
 set_param_mod='param_wang2018.json'
 #set_param_mod='param_wang2018_parallel.json'
 
 #dir_restart='20200219_223846'
 #dir_restart='20200221_234851'
-dir_restart='20200222_002120'
-#dir_restart=None
+#dir_restart='20200222_002120'
+dir_restart=None
+
+dir_load='20200222_002120/20200222_122717'
+#dir_load=None
 
 param_batch=[
     #{'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}
     #{'name': 'learning_rate', 'n':10, 'type':'parametric','method':'grid','min':0.0057,'max':0.0102},
     #{'name': 'learning_rate', 'n':100, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
     #{'name': 'learning_rate', 'n':2, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
-    {'name':'dummy_counter', 'n':3, 'type':'parametric', 'method':'grid', 'min':0,'max':2}
+    #{'name':'dummy_counter', 'n':3, 'type':'parametric', 'method':'grid', 'min':0,'max':2}
     #{'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
     #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
     #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
     #{'name': 'n_cells_lstm', 'n':20, 'type':'parametric','method':'grid','min':5,'max':100}
-    #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
+    {'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
     #{'name': 'episode_stop', 'n':5, 'type':'parametric','method':'grid','min':50000,'max':0.01}
 ]
@@ -119,17 +124,34 @@ class Sim():
     #def __init__(self,param_basic=param_basic,param_change=None):
     def __init__(self,set_param_sim=set_param_sim,set_param_mod=set_param_mod,
                  set_param_overwrite=None,
-                 path_code=path_code,path_save=path_save):
+                 path_code=path_code,path_save=path_save,
+                 path_save_batch=None,
+                 dir_load=dir_load):
 
         # Timestamping directory name
         datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
+        if path_save_batch is not None:
+            path_save_run=os.path.join(path_save_batch,datetime_start)
+        else:
+            path_save_run=os.path.join(path_save,datetime_start)
+        self.path_save=path_save
 
         # Setup parameters in Parmeters object
         self.param=Parameters(set_param_sim,path_code)
         self.param.add_json(set_param_mod,path_code)
-        self.param.add_dict({'datetime_start':datetime_start, 'path_save':os.path.join(path_save,datetime_start)})
+        self.param.add_dict({'datetime_start':datetime_start, 'path_save':path_save_run})
         if set_param_overwrite is not None:
             self.param.add_dict(set_param_overwrite)
+        if dir_load is not None:
+            with open(os.path.join(path_save,dir_load,"parameters.json")) as f:
+                dict_param=json.load(f)
+            episode_done=dict_param['episode_stop']
+            episode_stop=episode_done+self.param.episode_stop
+            print('episode_stop='+str(episode_done)+'+'+str(self.param.episode_stop))
+            self.param.add_dict({'load_model':1,'dir_load':dir_load,'episode_stop':episode_stop})
+        else:
+            self.param.add_dict({'load_model':0})
+
 
         # Make directories for saving
         if not os.path.exists(self.param.path_save):
@@ -172,12 +194,15 @@ class Sim():
         #config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
         config=tf.ConfigProto(allow_soft_placement=True)
         with tf.Session(config=config) as sess:
+            sess.run(tf.global_variables_initializer())
             if self.param.load_model == True:
-                print('Loading model: '+ self.param.path_load + '.')
-                ckpt = tf.train.get_checkpoint_state(self.param.path_load)
+                #ckpt = tf.train.get_checkpoint_state(self.param.path_load+'/model')
+                path_load=os.path.join(self.path_save,self.param.dir_load)
+                ckpt = tf.train.get_checkpoint_state(os.path.join(path_load,'model'))
                 self.saver.restore(sess,ckpt.model_checkpoint_path)
-            else:
-                sess.run(tf.global_variables_initializer())
+                print('Loaded parameters: '+ self.param.dir_load + '.')
+            #else:
+                #sess.run(tf.global_variables_initializer())
             coord = tf.train.Coordinator()
             #if self.param.xpu=='/gpu:0' and self.param.n_agents==1:
             if self.param.n_agents==1:
@@ -223,6 +248,7 @@ class Batch():
                 self.batch_table=self.batch_table.append(sr_append)
             self.batch_table=self.batch_table.reset_index(drop=True)
             self.save_batch_table()
+            print('Done batch setup for restart.')
         else:
             print('dir_restart not found: '+dir_restart)
 
@@ -289,7 +315,7 @@ class Batch():
             print('Batch simulation: ' + str(i + 1) + '/' + str(len(list_idx_run)),'.')
             param_overwrite=self.batch_table.loc[idx,self.batch_table.columns.difference(['datetime_start','run','done'])].to_dict()
             param_overwrite['path_save_batch']=self.path_save_batch
-            sim=Sim(path_save=self.path_save_batch,set_param_overwrite=param_overwrite)
+            sim=Sim(path_save_batch=self.path_save_batch,set_param_overwrite=param_overwrite)
             self.batch_table.loc[idx,'datetime_start']=sim.param.datetime_start
             self.save_batch_table()
             sim.run()
