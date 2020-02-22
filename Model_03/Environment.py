@@ -1,13 +1,15 @@
-###############
-# DESCRIPTION #
-###############
+######################################################################
+# Description ########################################################
+######################################################################
+'''
+Python code for task environment used for meta-RL.
+'''
 
-# Python code for task environment used for meta-RL.
 
+######################################################################
+# Libraries ##########################################################
+######################################################################
 
-#############
-# LIBRARIES #
-#############
 import numpy as np
 import moviepy.editor as mpy
 from PIL import Image
@@ -15,9 +17,9 @@ from PIL import ImageDraw
 from PIL import ImageFont
 
 
-###################################
-# ENVIRONMENT OF TWO-ARMED BANDIT #
-###################################
+######################################################################
+# Environment of two-armed bandit ####################################
+######################################################################
 
 class Two_Armed_Bandit():
     def __init__(self,config):
@@ -93,9 +95,9 @@ class Two_Armed_Bandit():
         clip.write_gif(filename, fps = len(images) / duration, verbose=False, progress_bar=False)
 
 
-############################################
-# ENVIRONMENT OF DUAL ASSIGNMENT WITH HOLD #
-############################################
+######################################################################
+# Environment of dual assignment with hold ###########################
+######################################################################
 
 class Dual_Assignment_with_Hold():
     def __init__(self,config):

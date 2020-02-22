@@ -1,22 +1,26 @@
-###############
-# DESCRIPTION #
-###############
+######################################################################
+# Description ########################################################
+######################################################################
+'''
+Python code for neural networks used for meta-RL.
+'''
 
-# Python code for neural networks used for meta-RL.
 
-#############
-# LIBRARIES #
-#############
+######################################################################
+# Libraries ##########################################################
+######################################################################
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 #from functions.helper import *
 
 
-#############
-# FUNCTIONS #
-#############
-#Used to initialize weights for policy and value output layers
+######################################################################
+# Functions ##########################################################
+######################################################################
+# Used to initialize weights for policy and value output layers
+
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -25,9 +29,9 @@ def normalized_columns_initializer(std=1.0):
     return _initializer
 
 
-####################
-# LSTM-RNN NETWORK #
-####################
+######################################################################
+# LSTM-RNN network ###################################################
+######################################################################
 
 class LSTM_RNN_Network():
     def __init__(self,param,n_actions,scope,trainer):
@@ -43,7 +47,7 @@ class LSTM_RNN_Network():
             hidden = tf.concat([self.prev_rewards,self.prev_actions_onehot,self.timestep],1)
             
             # LSTM cells
-            lstm_cell = tf.contrib.rnn.BasicLSTMCell(self.param.n_cells_lstm,state_is_tuple=True, name='LSTM_Cells')
+            lstm_cell = tf.contrib.rnn.BasicLSTMCell(int(self.param.n_cells_lstm),state_is_tuple=True, name='LSTM_Cells')
             
             # Initial all-zero state of LSTM cells
             c_init = np.zeros((1, lstm_cell.state_size.c), np.float32)
@@ -64,7 +68,7 @@ class LSTM_RNN_Network():
                 time_major=False)
             lstm_c, lstm_h = lstm_state
             self.state_out = (lstm_c[:1, :], lstm_h[:1, :])
-            rnn_out = tf.reshape(lstm_outputs, [-1, self.param.n_cells_lstm])
+            rnn_out = tf.reshape(lstm_outputs, [-1, int(self.param.n_cells_lstm)])
             
             self.actions = tf.placeholder(shape=[None],dtype=tf.int32)
             self.actions_onehot = tf.one_hot(self.actions,n_actions,dtype=tf.float32)
