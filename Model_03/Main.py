@@ -26,7 +26,8 @@ set_param_mod='param_wang2018.json'
 #dir_restart='20200219_223846'
 #dir_restart='20200221_234851'
 #dir_restart='20200222_002120'
-dir_restart=None
+dir_restart='20200222_233321'
+#dir_restart=None
 
 dir_load='20200222_002120/20200222_122717'
 #dir_load=None
