@@ -42,7 +42,7 @@ for i in range(len(list_path_data)):
 
 #dir_data = '20200216_191229'
 #dir_data = '20200216_204436'
-dir_data = '20200216_233234' # n_lstm_cell 4, 15, ... 48
+#dir_data = '20200216_233234' # n_lstm_cell 4, 15, ... 48
 #dir_data = '20200217_103834'
 #dir_data='20200218_212228' # n_lstm_cell 5, 10, ... 100
 #dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019
@@ -51,6 +51,9 @@ dir_data = '20200216_233234' # n_lstm_cell 4, 15, ... 48
 #dir_data='20200222_002120' # three long runs (200000)
 #dir_data='20200222_214653' # test loading with multiple learning rates
 #dir_data='20200222_232008' # test loading with fixed learning rate
+dir_data='20200223_153711' # combined '20200219_223846' and '20200220_230830'
+
+list_dir_data=['20200219_223846','20200220_230830']
 
 
 ######################################################################
@@ -69,6 +72,41 @@ import datetime
 #import plotly as py
 #import cufflinks as cf
 #import glob
+
+
+######################################################################
+# Combine multiple batches ###########################################
+######################################################################
+class BatchCombine():
+    def __init__(self, path_data=path_data,list_dir_data=list_dir_data):
+        self.path_data=path_data
+        self.df_batch=pd.DataFrame()
+        for dir_data in list_dir_data:
+            path_load_batch=os.path.join(path_data,dir_data)
+            if os.path.exists(path_load_batch):
+                # Read batch_table
+                with pd.HDFStore(os.path.join(path_load_batch,'batch_table.h5')) as hdf:
+                    df_batch_append = pd.DataFrame(hdf['batch_table'])
+                #df_batch_append=df_batch_append.loc[df_batch['done']==True,:]
+                self.df_batch=self.df_batch.append(df_batch_append)
+            else:
+                print("Batch dir does not exist: "+dir_data+".")
+        
+        self.df_batch=self.df_batch.reset_index(drop=True)
+        print('Detected '+str(len(self.df_batch))+' runs.')
+
+    def combine(self):
+        # Timestamping directory name
+        datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
+        self.path_save_batch=os.path.join(self.path_data,datetime_start)
+        if not os.path.exists(self.path_save_batch):
+            os.makedirs(self.path_save_batch)
+
+        hdf=pd.HDFStore(self.path_save_batch+'/batch_table.h5')
+        hdf.put('batch_table',self.df_batch,format='table',append=False,data_columns=True)
+        hdf.close()
+        print('Saved new batch table.')
+        print('Please copy subdirectories manually.')
 
 
 ######################################################################
@@ -196,7 +234,7 @@ class BatchAnalysis():
         df_plot.columns=df_reward['episode_start'].tolist()
         df_plot.index=self.label_batch
         self.df_plot=df_plot
-        fig=plt.figure(figsize=(6,4),dpi=100)
+        fig=plt.figure(figsize=(6,5),dpi=100)
         ax=fig.add_subplot(1,1,1)
         #heatmap=ax.pcolor(df_reward['episode_start'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow)
         heatmap=ax.pcolor(df_reward['episode'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow)
@@ -219,7 +257,7 @@ class BatchAnalysis():
         print('Preparing line plot.')
         #self.path=os.path.join(path_data,dir_data)
         #self.df_ave=df_ave
-        fig=plt.figure(figsize=(6,4),dpi=100)
+        fig=plt.figure(figsize=(6,5),dpi=100)
         ax=fig.add_subplot(1,1,1)
         for i in range(self.n_batch):
             ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
@@ -236,7 +274,7 @@ class BatchAnalysis():
         plt.show()
 
     def plot_state(self,df_state):
-        fig=plt.figure(figsize=(6,4),dpi=100)
+        fig=plt.figure(figsize=(6,5),dpi=100)
         ax=fig.add_subplot(1,1,1)
         for i in range(self.n_batch):
             ax.plot(df_state['episode'],df_state.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
@@ -254,7 +292,7 @@ class BatchAnalysis():
         plt.show()
 
     def plot_count(self,df_count):
-        fig=plt.figure(figsize=(6,4),dpi=100)
+        fig=plt.figure(figsize=(6,5),dpi=100)
         ax=fig.add_subplot(1,1,1)
         for i in range(self.n_batch):
             ax.plot(df_count['episode'],df_count.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
