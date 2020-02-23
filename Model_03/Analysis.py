@@ -190,15 +190,19 @@ class BatchAnalysis():
         print('Finished averaging reward.')
         return(output)
 
-    def state_reward(self,df_reward,threshold=[65,67.5]):
+    def state_reward(self,df_reward,learned=False,threshold=[65,67.5]):
         self.thresh_reward=threshold
         print('Calculating disease states.')
         sleep(1)
         col_batch=df_reward.drop(['episode','episode_start','episode_stop'],axis=1).columns.tolist()
+        if learned:
+            state_init=[1,0]
+        else:
+            state_init=[0,-1]
         # State at each episode, 0: unlearned, 1: learned 2: psychotic 3: remitted
-        df_state=pd.DataFrame(0,columns=col_batch,index=df_reward.index).astype(int)
-        # State history, -1: never learned, 0: has learned, >1: N psychotic episodes
-        df_count=pd.DataFrame(-1,columns=col_batch,index=df_reward.index).astype(int)
+        df_state=pd.DataFrame(state_init[0],columns=col_batch,index=df_reward.index).astype(int)
+        # State history, -1: never learned, 0: has learned, N>0: N psychotic episodes
+        df_count=pd.DataFrame(state_init[1],columns=col_batch,index=df_reward.index).astype(int)
         #sr_state=pd.Series(-1,index=col_batch).astype(int)
         for i in tqdm(range(1,len(df_reward))):
             for col in col_batch:

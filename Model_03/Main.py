@@ -16,10 +16,9 @@ For batch simulations,
 # Parameters #########################################################
 ######################################################################
 
-set_param_sim='param_sim.json'
+#set_param_sim='param_sim.json'
 #set_param_sim='param_sim_long.json'
-#set_param_sim='param_test.json'
-#set_param_sim='param_test_load.json'
+set_param_sim='param_test.json'
 
 set_param_mod='param_wang2018.json'
 #set_param_mod='param_wang2018_parallel.json'
@@ -42,9 +41,10 @@ param_batch=[
     #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
     #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
     #{'name': 'n_cells_lstm', 'n':20, 'type':'parametric','method':'grid','min':5,'max':100}
-    {'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
+    #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
     #{'name': 'episode_stop', 'n':5, 'type':'parametric','method':'grid','min':50000,'max':0.01}
+    {'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':5,'max':100}
 ]
 
 
@@ -176,19 +176,20 @@ class Sim():
             elif self.param.optimizer == "RMSProp":
                 self.trainer = tf.train.RMSPropOptimizer(learning_rate=self.param.learning_rate)
             if self.param.environment == 'Two_Armed_Bandit':
-                agent_alias=Environment.Two_Armed_Bandit
+                env_alias=Environment.Two_Armed_Bandit
             elif self.param.environment == 'Dual_Assignment_with_Hold':
-                agent_alias=Environment.Dual_Assignment_with_Hold
+                env_alias=Environment.Dual_Assignment_with_Hold
+            # Generate master network
             self.master_network = Network.LSTM_RNN_Network(self.param,
-                                                agent_alias(self.param.config_environment).n_actions,
-                                                'master',None) # Generate master network
+                                                           env_alias(self.param.config_environment).n_actions,
+                                                           'master',None) 
             #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
             self.saver = tf.train.Saver(max_to_keep=5)
             self.agents = []
-            # Create A2C_Agent classes
+            # Create A2C_Agent classes (local network is defined within agent definition)
             for i in range(self.param.n_agents):
-                self.agents.append(Agent.A2C_Agent(i,self.param,agent_alias(self.param.config_environment),
-                                             self.trainer,self.saver,self.episode_global))
+                self.agents.append(Agent.A2C_Agent(i,self.param,env_alias(self.param.config_environment),
+                                                   self.trainer,self.saver,self.episode_global))
 
         # Run agents
         #config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
