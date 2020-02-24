@@ -51,9 +51,13 @@ for i in range(len(list_path_data)):
 #dir_data='20200222_002120' # three long runs (200000)
 #dir_data='20200222_214653' # test loading with multiple learning rates
 #dir_data='20200222_232008' # test loading with fixed learning rate
-dir_data='20200223_153711' # combined '20200219_223846' and '20200220_230830'
+#dir_data='20200223_153711' # combined '20200219_223846' and '20200220_230830'
+#dir_data='20200222_233321' # learning_rate 0.0001, 0.0002, ... 0.0019 after loading '20200222_002120/20200222_122717'
+#dir_data='20200223_235457' # learning_rate 0.0020, 0.0025, ... 0.0100 after loading '20200222_002120/20200222_122717'
+dir_data='20200224_220741' # combined '20200222_233321' and '20200223_235457'
 
-list_dir_data=['20200219_223846','20200220_230830']
+#list_dir_data=['20200219_223846','20200220_230830']
+list_dir_data=['20200222_233321','20200223_235457']
 
 
 ######################################################################
@@ -248,7 +252,7 @@ class BatchAnalysis():
         fig=plt.figure(figsize=(6,5),dpi=100)
         ax=fig.add_subplot(1,1,1)
         #heatmap=ax.pcolor(df_reward['episode_start'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow)
-        heatmap=ax.pcolor(df_reward['episode'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow)
+        heatmap=ax.pcolor(df_reward['episode'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow_r)
         #ax.set_xticks(np.arange(df_plot.shape[1]), minor=False)
         ax.set_yticks(np.arange(df_plot.shape[0]) + 0.5, minor=False)
         ax.invert_yaxis()
@@ -334,13 +338,13 @@ class BatchAnalysis():
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_count.png'))
         plt.show()
 
-    def pipe_state(self,window=1000,padding=10,threshold=[65,67.5]):
+    def pipe_state(self,window=1000,padding=10,learned=True,threshold=[65,67.5]):
         df_batchreward=self.batch_load_reward()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
-        data_state=self.state_reward(df_batchrewardave,threshold=threshold)
+        data_state=self.state_reward(df_batchrewardave,learned=learned,threshold=threshold)
+        self.heatmap_reward(df_batchrewardave)
         self.plot_state(data_state[0])
         self.plot_count(data_state[1])
-        self.heatmap_reward(df_batchrewardave)
         self.plot_cumulative(data_state[2])
         return(data_state)
         
