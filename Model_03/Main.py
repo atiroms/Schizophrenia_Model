@@ -16,9 +16,9 @@ For batch simulations,
 # Parameters #########################################################
 ######################################################################
 
-#set_param_sim='param_sim.json'
+set_param_sim='param_sim.json'
 #set_param_sim='param_sim_long.json'
-set_param_sim='param_test.json'
+#set_param_sim='param_test.json'
 
 set_param_mod='param_wang2018.json'
 #set_param_mod='param_wang2018_parallel.json'
@@ -26,8 +26,8 @@ set_param_mod='param_wang2018.json'
 #dir_restart='20200219_223846'
 #dir_restart='20200221_234851'
 #dir_restart='20200222_002120'
-dir_restart='20200222_233321'
-#dir_restart=None
+#dir_restart='20200222_233321'
+dir_restart=None
 
 dir_load='20200222_002120/20200222_122717'
 #dir_load=None
@@ -36,7 +36,7 @@ param_batch=[
     #{'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}
     #{'name': 'learning_rate', 'n':10, 'type':'parametric','method':'grid','min':0.0057,'max':0.0102},
     #{'name': 'learning_rate', 'n':100, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
-    {'name': 'learning_rate', 'n':2, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
+    #{'name': 'learning_rate', 'n':2, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
     #{'name':'dummy_counter', 'n':3, 'type':'parametric', 'method':'grid', 'min':0,'max':2}
     #{'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
     #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
@@ -44,6 +44,7 @@ param_batch=[
     #{'name': 'n_cells_lstm', 'n':20, 'type':'parametric','method':'grid','min':5,'max':100}
     #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
+    {'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
     #{'name': 'episode_stop', 'n':5, 'type':'parametric','method':'grid','min':50000,'max':0.01}
     #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':5,'max':100}
 ]
