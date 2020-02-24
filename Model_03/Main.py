@@ -35,7 +35,7 @@ param_batch=[
     #{'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}
     #{'name': 'learning_rate', 'n':10, 'type':'parametric','method':'grid','min':0.0057,'max':0.0102},
     #{'name': 'learning_rate', 'n':100, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
-    #{'name': 'learning_rate', 'n':2, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
+    {'name': 'learning_rate', 'n':2, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
     #{'name':'dummy_counter', 'n':3, 'type':'parametric', 'method':'grid', 'min':0,'max':2}
     #{'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
     #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
@@ -44,7 +44,7 @@ param_batch=[
     #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
     #{'name': 'episode_stop', 'n':5, 'type':'parametric','method':'grid','min':50000,'max':0.01}
-    {'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':5,'max':100}
+    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':5,'max':100}
 ]
 
 
