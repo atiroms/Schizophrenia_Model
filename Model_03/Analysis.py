@@ -171,6 +171,7 @@ class BatchAnalysis():
                 output=summary
             else:
                 output=pd.merge(output,summary,how='outer', on='episode')
+        output['episode']=output['episode']-output.loc[0,'episode']
         print('Finished loading data.')
         #self.df_ave=MovAveEpisode(dataframe=self.summaries).output
         return(output)
@@ -196,16 +197,19 @@ class BatchAnalysis():
         sleep(1)
         col_batch=df_reward.drop(['episode','episode_start','episode_stop'],axis=1).columns.tolist()
         if learned:
-            state_init=[1,0]
+            state_init=[1,0,0]
         else:
-            state_init=[0,-1]
+            state_init=[0,-1,0]
         # State at each episode, 0: unlearned, 1: learned 2: psychotic 3: remitted
         df_state=pd.DataFrame(state_init[0],columns=col_batch,index=df_reward.index).astype(int)
         # State history, -1: never learned, 0: has learned, N>0: N psychotic episodes
         df_count=pd.DataFrame(state_init[1],columns=col_batch,index=df_reward.index).astype(int)
+        # Cumulative psychosis
+        df_cumul=pd.DataFrame(state_init[2],columns=col_batch,index=df_reward.index)
         #sr_state=pd.Series(-1,index=col_batch).astype(int)
         for i in tqdm(range(1,len(df_reward))):
             for col in col_batch:
+                df_cumul.loc[i,col]=df_cumul.loc[i-1,col]
                 if df_reward.loc[i,col]<threshold[0]:                           # Currently below threshold
                     if df_state.loc[i-1,col]==0 or df_state.loc[i-1,col]==2:    # Stayed below threshold
                         df_state.loc[i,col]=df_state.loc[i-1,col]                  # No change
@@ -213,6 +217,8 @@ class BatchAnalysis():
                     else:                                                       # Fell below threshold
                         df_state.loc[i,col]=2                                      # Fall psychotic                   
                         df_count.loc[i,col]=df_count.loc[i-1,col]+1                # Count up psychosis
+                    if df_state.loc[i,col]==2:                                   # Currently psychotic
+                        df_cumul.loc[i,col]=df_cumul.loc[i-1,col]+(threshold[0]-df_reward.loc[i,col])*self.pad_ave
                 elif df_reward.loc[i,col]>=threshold[1]:                        # Currently above threshold
                     if df_state.loc[i-1,col]==0 or df_state.loc[i-1,col]==2:    # Climbed above threshold
                         if df_count.loc[i-1,col]==-1:                                   # Learned for the first time
@@ -229,8 +235,9 @@ class BatchAnalysis():
                     df_count.loc[i,col]=df_count.loc[i-1,col]
         df_state=pd.concat([df_reward[['episode_start','episode_stop','episode']],df_state],axis=1)
         df_count=pd.concat([df_reward[['episode_start','episode_stop','episode']],df_count],axis=1)
+        df_cumul=pd.concat([df_reward[['episode_start','episode_stop','episode']],df_cumul],axis=1)
         print('Finished calculating disease states')
-        return([df_state,df_count])
+        return([df_state,df_count,df_cumul])
 
     def heatmap_reward(self,df_reward):
         print('Preparing heatmap plot.')
@@ -290,7 +297,7 @@ class BatchAnalysis():
         ax.set_ylabel("State")
         ax.legend(title=self.title_batch,labels=self.label_batch,
                   bbox_to_anchor=(1.05,1),loc='upper left')
-        plt.tight_layout()
+        #plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_state.png'))
         plt.show()
@@ -306,7 +313,23 @@ class BatchAnalysis():
         ax.set_ylabel("Count of psychotic episodes")
         ax.legend(title=self.title_batch,labels=self.label_batch,
                   bbox_to_anchor=(1.05,1),loc='upper left')
-        plt.tight_layout()
+        #plt.tight_layout()
+        plt.savefig(os.path.join(self.path_save_analysis,
+                                 "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_cumul.png'))
+        plt.show()
+
+    def plot_cumulative(self,df_cumul):
+        fig=plt.figure(figsize=(6,5),dpi=100)
+        ax=fig.add_subplot(1,1,1)
+        for i in range(self.n_batch):
+            ax.plot(df_cumul['episode'],df_cumul.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
+                    color=cm.rainbow(i/self.n_batch))
+        ax.set_title("Cumulative psychosis duration x severity")
+        ax.set_xlabel("Task episode")
+        ax.set_ylabel("Duration x Severity")
+        ax.legend(title=self.title_batch,labels=self.label_batch,
+                  bbox_to_anchor=(1.05,1),loc='upper left')
+        #plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_count.png'))
         plt.show()
@@ -315,10 +338,12 @@ class BatchAnalysis():
         df_batchreward=self.batch_load_reward()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
         data_state=self.state_reward(df_batchrewardave,threshold=threshold)
-        self.plot_reward(df_batchrewardave)
         self.plot_state(data_state[0])
         self.plot_count(data_state[1])
-
+        self.heatmap_reward(df_batchrewardave)
+        self.plot_cumulative(data_state[2])
+        return(data_state)
+        
     def pipe_mov(self,window=1000,padding=10):
         df_batchreward=self.batch_load_reward()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window)
