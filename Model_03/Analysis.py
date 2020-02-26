@@ -40,22 +40,22 @@ for i in range(len(list_path_data)):
     elif i==len(list_path_data)-1:
         raise ValueError('Data folder does not exist in the list.')
 
-#dir_data = '20200216_191229'
-#dir_data = '20200216_204436'
-#dir_data = '20200216_233234' # n_lstm_cell 4, 15, ... 48
-#dir_data = '20200217_103834'
-#dir_data='20200218_212228' # n_lstm_cell 5, 10, ... 100
+#dir_data='20200216_191229'
+#dir_data='20200216_204436'
+#dir_data='20200216_233234' # n_cells_lstm 4, 15, ... 48
+#dir_data='20200217_103834'
+#dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
 #dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019
 #dir_data='20200220_230830' # learning_rate 0.0020, 0.0025, ... 0.0100
-#dir_data='20200221_234851' # test run
 #dir_data='20200222_002120' # three long runs (200000)
-#dir_data='20200222_214653' # test loading with multiple learning rates
-#dir_data='20200222_232008' # test loading with fixed learning rate
 #dir_data='20200223_153711' # combined '20200219_223846' and '20200220_230830'
 #dir_data='20200222_233321' # learning_rate 0.0001, 0.0002, ... 0.0019 after loading '20200222_002120/20200222_122717'
 #dir_data='20200223_235457' # learning_rate 0.0020, 0.0025, ... 0.0100 after loading '20200222_002120/20200222_122717'
 #dir_data='20200224_220741' # combined '20200222_233321' and '20200223_235457'
-dir_data='20200226_114839' # test original data loading
+#dir_data='20200224_234232' # learning_rate 0.0150, 0.0200, ... 0.1000 after loading '20200222_002120/20200222_122717'
+#dir_data='20200226_153138' # n_cells_lstm 36,48,60 after loading '20200222_002120/20200222_122717'
+dir_data='20200226_200910' # n_cells_lstm 12,16,...60 after loading '20200222_002120/20200222_122717'
+
 
 #list_dir_data=['20200219_223846','20200220_230830']
 list_dir_data=['20200222_233321','20200223_235457']

@@ -43,7 +43,7 @@ param_batch=[
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
     #{'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
     #{'name': 'n_cells_lstm', 'n':3, 'type':'parametric','method':'grid','min':36,'max':60}
-    {'name': 'n_cells_lstm', 'n':11, 'type':'parametric','method':'grid','min':20,'max':60}
+    {'name': 'n_cells_lstm', 'n':13, 'type':'parametric','method':'grid','min':12,'max':60}
 ]
 
 
@@ -195,7 +195,7 @@ class Sim():
 
         # Reshape source graph variables into arrays
         ary_var_src=np.asarray(df_var_src['value'],order='c').astype('float32')
-        ary_kernel_src,ary_bias,ary_fc0,ary_fc1=np.split(ary_var_src,
+        ary_kernel_src,ary_bias_src,ary_fc0_src,ary_fc1_src=np.split(ary_var_src,
                                                      [(n_actions+2+n_cells_src)*4*n_cells_src,
                                                       (n_actions+3+n_cells_src)*4*n_cells_src,
                                                       ((n_actions+3+n_cells_src)*4+n_actions)*n_cells_src])
