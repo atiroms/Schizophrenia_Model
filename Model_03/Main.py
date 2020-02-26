@@ -226,6 +226,7 @@ class Sim():
             ary_bias_init=ary_bias
             ary_fc0_init=ary_fc0
             ary_fc1_init=ary_fc1
+            print("Preserved "+str(int(n_cells))+" LSTM cells.")
         elif n_cells_new<n_cells:
             idx_del=np.arange(n_cells_new,n_cells)
             idx_del_4=[]
@@ -233,10 +234,11 @@ class Sim():
                 idx_del_4=np.concatenate([idx_del_4,idx_del+n_cells*i])
 
             ary_kernel_init=np.delete(ary_kernel,idx_del+n_actions+2,0)
-            ary_kernel_init=np.delete(ary_kernel,idx_del_4,1)
+            ary_kernel_init=np.delete(ary_kernel_init,idx_del_4,1)
             ary_bias_init=np.delete(ary_bias,idx_del_4,0)
             ary_fc0_init=np.delete(ary_fc0,idx_del,0)
             ary_fc1_init=np.delete(ary_fc1,idx_del,0)
+            print("Deleted "+str(int(n_cells-n_cells_new))+" LSTM cells.")
         elif n_cells_new>n_cells:
             idx_ow=np.arange(n_cells)
             idx_ow_4=[]
@@ -252,6 +254,7 @@ class Sim():
                                                    idx_ow,np.arange(n_actions))
             ary_fc1_init=self.replace_uncontigious(ary_fc1_init,ary_fc1,
                                                    idx_ow,[0])
+            print("Added "+str(int(n_cells_new-n_cells))+" LSTM cells.")
         
         # Assign destination arrays to TF tensors
         '''
