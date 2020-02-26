@@ -27,8 +27,8 @@ set_param_mod='param_wang2018.json'
 #dir_restart='20200221_234851'
 #dir_restart='20200222_002120'
 #dir_restart='20200222_233321'
-dir_restart='20200224_234232'
-#dir_restart=None
+#dir_restart='20200224_234232'
+dir_restart=None
 
 dir_load='20200222_002120/20200222_122717'
 #dir_load=None
@@ -45,9 +45,8 @@ param_batch=[
     #{'name': 'n_cells_lstm', 'n':20, 'type':'parametric','method':'grid','min':5,'max':100}
     #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
-    {'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
-    #{'name': 'episode_stop', 'n':5, 'type':'parametric','method':'grid','min':50000,'max':0.01}
-    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':5,'max':100}
+    #{'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
+    {'name': 'n_cells_lstm', 'n':3, 'type':'parametric','method':'grid','min':36,'max':60}
 ]
 
 
@@ -146,12 +145,15 @@ class Sim():
         if set_param_overwrite is not None:
             self.param.add_dict(set_param_overwrite)
         if dir_load is not None:
+            '''
             with open(os.path.join(path_save,dir_load,"parameters.json")) as f:
                 dict_param=json.load(f)
             episode_done=dict_param['episode_stop']
             episode_stop=episode_done+self.param.episode_stop
             print('episode_stop='+str(episode_done)+'+'+str(self.param.episode_stop))
             self.param.add_dict({'load_model':1,'dir_load':dir_load,'episode_stop':episode_stop})
+            '''
+            self.param.add_dict({'load_model':1,'dir_load':dir_load})
         else:
             self.param.add_dict({'load_model':0})
 
@@ -166,6 +168,101 @@ class Sim():
         # Save parameters
         with open(os.path.join(self.param.path_save,'parameters.json'), 'w') as fp:
             json.dump(self.param.__dict__, fp, indent=1)
+
+    def replace_uncontigious(self,ary_src,ary_rep,idx_row,idx_col):
+        ary_dst=ary_src
+        if len(idx_row)!=ary_rep.shape[0]:
+            print('idx_row and ary_rep 0th dim do not match: '+str(len(idx_row))+', '+str(ary_rep.shape[0]))
+        if len(idx_col)!=ary_rep.shape[1]:
+            print('idx_col and ary_rep 1st dim do not match: '+str(len(idx_col))+', '+str(ary_rep.shape[1]))
+        for i in range(len(idx_row)):
+            for j in range(len(idx_col)):
+                ary_dst[idx_row[i],idx_col[j]]=ary_rep[i,j]
+        return(ary_dst)
+
+    def load_graph(self,list_ary_dst,env_alias):
+
+        # Load source graph specs
+        #path_parameter=os.path.join(path_save,'20200222_002120/20200222_122717/parameters.json')
+        #with open(path_parameter) as f:
+        with open(os.path.join(self.path_save,self.param.dir_load,'parameters.json')) as f:
+            dict_param=json.load(f)
+        n_cells=dict_param['n_cells_lstm']
+        n_actions=env_alias(self.param.config_environment).n_actions
+
+        # Load source graph variables
+        #path_variable=os.path.join(path_save,'20200222_002120/20200222_122717/model/variable.h5')
+        #with pd.HDFStore(path_variable) as hdf:
+        with pd.HDFStore(os.path.join(self.path_save,self.param.dir_load,'model/variable.h5')) as hdf:
+            df_var = pd.DataFrame(hdf['variable'])
+        df_var=df_var.loc[df_var['episode']==max(df_var['episode']),:]
+
+        # Reshape source graph variables into arrays
+        ary_var=np.asarray(df_var['value'],order='c').astype('float32')
+        ary_kernel,ary_bias,ary_fc0,ary_fc1=np.split(ary_var,
+                                                     [(n_actions+2+n_cells)*4*n_cells,
+                                                      (n_actions+3+n_cells)*4*n_cells,
+                                                      ((n_actions+3+n_cells)*4+n_actions)*n_cells])
+        ary_kernel=ary_kernel.reshape([n_actions+2+n_cells,4*n_cells])
+        ary_bias=ary_bias.reshape([4*n_cells])
+        ary_fc0=ary_fc0.reshape([n_cells,n_actions])
+        ary_fc1=ary_fc1.reshape([n_cells,1])
+
+        # Load variables from initialized destination graph
+        '''
+        #sess=tf.Session()
+        #sess.run(tf.global_variables_initializer())
+        vars_master = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,'master')
+        #vars_agent0 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,'agent_0')
+        ary_kernel_init,ary_bias_init,ary_fc0_init,ary_fc1_init = sess.run(vars_master)
+        '''
+        ary_kernel_init,ary_bias_init,ary_fc0_init,ary_fc1_init = list_ary_dst
+
+        # Delete/expand source graph variable arrays,
+        # and overwrite destination graph variable arrays
+        n_cells_new=self.param.n_cells_lstm
+        if n_cells_new==n_cells:
+            ary_kernel_init=ary_kernel
+            ary_bias_init=ary_bias
+            ary_fc0_init=ary_fc0
+            ary_fc1_init=ary_fc1
+        elif n_cells_new<n_cells:
+            idx_del=np.arange(n_cells_new,n_cells)
+            idx_del_4=[]
+            for i in range(4):
+                idx_del_4=np.concatenate([idx_del_4,idx_del+n_cells*i])
+
+            ary_kernel_init=np.delete(ary_kernel,idx_del+n_actions+2,0)
+            ary_kernel_init=np.delete(ary_kernel,idx_del_4,1)
+            ary_bias_init=np.delete(ary_bias,idx_del_4,0)
+            ary_fc0_init=np.delete(ary_fc0,idx_del,0)
+            ary_fc1_init=np.delete(ary_fc1,idx_del,0)
+        elif n_cells_new>n_cells:
+            idx_ow=np.arange(n_cells)
+            idx_ow_4=[]
+            for i in range(4):
+                idx_ow_4=np.concatenate([idx_ow_4,idx_ow+n_cells_new*i])
+            idx_ow_4=idx_ow_4.astype('int64')
+            ary_kernel_init=self.replace_uncontigious(ary_kernel_init,ary_kernel,
+                                                      np.concatenate([np.arange(n_actions+2),
+                                                                      idx_ow+n_actions+2]),
+                                                      idx_ow_4)
+            ary_bias_init[idx_ow_4]=ary_bias
+            ary_fc0_init=self.replace_uncontigious(ary_fc0_init,ary_fc0,
+                                                   idx_ow,np.arange(n_actions))
+            ary_fc1_init=self.replace_uncontigious(ary_fc1_init,ary_fc1,
+                                                   idx_ow,[0])
+        
+        # Assign destination arrays to TF tensors
+        '''
+        sess.run([vars_master[0].assign(ary_kernel_init),
+                  vars_master[1].assign(ary_bias_init),
+                  vars_master[2].assign(ary_fc0_init),
+                  vars_master[3].assign(ary_fc1_init)])
+        #val_loaded = sess.run(vars_master)
+        #val_loaded[0]
+        '''
+        return([ary_kernel_init,ary_bias_init,ary_fc0_init,ary_fc1_init])
 
     def run(self):
         print('Running: '+ self.param.datetime_start + '.')
@@ -200,15 +297,27 @@ class Sim():
         with tf.Session(config=config) as sess:
             sess.run(tf.global_variables_initializer())
             if self.param.load_model == True:
-                #ckpt = tf.train.get_checkpoint_state(self.param.path_load+'/model')
+                # Load variables from initialized destination graph
+                vars_master = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,'master')
+                list_ary_dst=sess.run(vars_master)
+                # New original graph loading
+                list_ary_dst=self.load_graph(list_ary_dst,env_alias)
+                # Assign destination arrays to TF tensors
+                sess.run([vars_master[0].assign(list_ary_dst[0]),
+                          vars_master[1].assign(list_ary_dst[1]),
+                          vars_master[2].assign(list_ary_dst[2]),
+                          vars_master[3].assign(list_ary_dst[3])])
+                print('Loaded parameters: '+ self.param.dir_load + '.')
+
+                # TensorFlow default graph data loading
+                # Only for the same sized graph
+                '''
                 path_load=os.path.join(self.path_save,self.param.dir_load)
                 ckpt = tf.train.get_checkpoint_state(os.path.join(path_load,'model'))
                 self.saver.restore(sess,ckpt.model_checkpoint_path)
                 print('Loaded parameters: '+ self.param.dir_load + '.')
-            #else:
-                #sess.run(tf.global_variables_initializer())
+                '''
             coord = tf.train.Coordinator()
-            #if self.param.xpu=='/gpu:0' and self.param.n_agents==1:
             if self.param.n_agents==1:
                 self.agents[0].work(sess,coord)
             elif self.param.xpu=='/gpu:0' and self.param.n_agents>1:
