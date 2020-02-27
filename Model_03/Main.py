@@ -43,7 +43,9 @@ param_batch=[
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
     #{'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
     #{'name': 'n_cells_lstm', 'n':3, 'type':'parametric','method':'grid','min':36,'max':60}
-    {'name': 'n_cells_lstm', 'n':13, 'type':'parametric','method':'grid','min':12,'max':60}
+    #{'name': 'n_cells_lstm', 'n':13, 'type':'parametric','method':'grid','min':12,'max':60}
+    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':4,'max':8}
+    {'name': 'n_cells_lstm', 'n':11, 'type':'parametric','method':'grid','min':1,'max':11}
 ]
 
 

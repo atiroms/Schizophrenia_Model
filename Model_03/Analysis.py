@@ -54,11 +54,18 @@ for i in range(len(list_path_data)):
 #dir_data='20200224_220741' # combined '20200222_233321' and '20200223_235457'
 #dir_data='20200224_234232' # learning_rate 0.0150, 0.0200, ... 0.1000 after loading '20200222_002120/20200222_122717'
 #dir_data='20200226_153138' # n_cells_lstm 36,48,60 after loading '20200222_002120/20200222_122717'
-dir_data='20200226_200910' # n_cells_lstm 12,16,...60 after loading '20200222_002120/20200222_122717'
+#dir_data='20200226_200910' # n_cells_lstm 12,16,...60 after loading '20200222_002120/20200222_122717'
+#dir_data='20200227_123416' # n_cells_lstm 4,8 after loading '20200222_002120/20200222_122717'
+dir_data='20200227_151151' # combined '20200222_233321', '20200223_235457' and '20200224_234232' (learning_rate 0.0001-0.1000)
+#dir_data='20200227_150929' # combined '20200227_123416' and '20200226_200910' (n_cells_lstm 4-60)
+#dir_data='20200227_160031' # n_cells_lstm 1,2,..11 after loading '20200222_002120/20200222_122717'
+#dir_data='' # combined '20200227_160031' and '20200226_200910' (n_cells_lstm 1-60)
 
 
 #list_dir_data=['20200219_223846','20200220_230830']
-list_dir_data=['20200222_233321','20200223_235457']
+#list_dir_data=['20200222_233321','20200223_235457','20200224_234232']
+#list_dir_data=['20200227_123416','20200226_200910']
+list_dir_data=['20200227_160031','20200226_200910']
 
 
 ######################################################################
@@ -250,7 +257,7 @@ class BatchAnalysis():
         df_plot.columns=df_reward['episode_start'].tolist()
         df_plot.index=self.label_batch
         self.df_plot=df_plot
-        fig=plt.figure(figsize=(6,5),dpi=100)
+        fig=plt.figure(figsize=(6,0.15*len(df_plot)),dpi=100)
         ax=fig.add_subplot(1,1,1)
         #heatmap=ax.pcolor(df_reward['episode_start'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow)
         heatmap=ax.pcolor(df_reward['episode'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow_r)
@@ -261,7 +268,7 @@ class BatchAnalysis():
         ax.set_yticklabels(self.label_batch, minor=False)
         ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
         ax.set_xlabel("Task episode")
-        ax.set_ylabel("Batch ("+self.title_batch+")")
+        ax.set_ylabel(self.title_batch)
         cbar=fig.colorbar(heatmap,ax=ax)
         cbar.set_label('Average reward')
         plt.tight_layout()
@@ -301,8 +308,8 @@ class BatchAnalysis():
         ax.set_xlabel("Task episode")
         ax.set_ylabel("State")
         ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left')
-        #plt.tight_layout()
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=4)
+        plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_state.png'))
         plt.show()
@@ -317,8 +324,8 @@ class BatchAnalysis():
         ax.set_xlabel("Task episode")
         ax.set_ylabel("Count of psychotic episodes")
         ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left')
-        #plt.tight_layout()
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=4)
+        plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_cumul.png'))
         plt.show()
@@ -333,8 +340,8 @@ class BatchAnalysis():
         ax.set_xlabel("Task episode")
         ax.set_ylabel("Duration x Severity")
         ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left')
-        #plt.tight_layout()
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=4)
+        plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_count.png'))
         plt.show()
