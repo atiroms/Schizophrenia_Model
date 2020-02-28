@@ -42,7 +42,7 @@ for i in range(len(list_path_data)):
 
 #dir_data='20200216_191229'
 #dir_data='20200216_204436'
-#dir_data='20200216_233234' # n_cells_lstm 4, 15, ... 48
+dir_data='20200216_233234' # n_cells_lstm 4, 15, ... 48
 #dir_data='20200217_103834'
 #dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
 #dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019
@@ -59,8 +59,8 @@ for i in range(len(list_path_data)):
 #dir_data='20200227_151151' # combined '20200222_233321', '20200223_235457' and '20200224_234232' (learning_rate 0.0001-0.1000)
 #dir_data='20200227_150929' # combined '20200227_123416' and '20200226_200910' (n_cells_lstm 4-60)
 #dir_data='20200227_160031' # n_cells_lstm 1,2,..11 after loading '20200222_002120/20200222_122717'
-dir_data='20200228_123122' # combined '20200227_160031' and '20200226_200910' (n_cells_lstm 1-60)
-dir_data='20200228_130159' # n_cells_lstm 13,14,..36 after loading '20200222_002120/20200222_122717'
+#dir_data='20200228_123122' # combined '20200227_160031' and '20200226_200910' (n_cells_lstm 1-60)
+#dir_data='20200228_130159' # n_cells_lstm 13,14,..36 after loading '20200222_002120/20200222_122717'
 
 #list_dir_data=['20200219_223846','20200220_230830']
 #list_dir_data=['20200222_233321','20200223_235457','20200224_234232']
@@ -133,7 +133,7 @@ class BatchAnalysis():
             os.makedirs(self.path_save_analysis)
         self.subset=subset
 
-    def batch_load_reward(self):
+    def batch_load_reward(self,key='reward'):
         # Read batch_table
         with pd.HDFStore(os.path.join(self.path_load_batch,'batch_table.h5')) as hdf:
             df_batch = pd.DataFrame(hdf['batch_table'])
@@ -178,7 +178,7 @@ class BatchAnalysis():
             with pd.HDFStore(path+'/summary/summary.h5') as hdf:
                 summary = pd.DataFrame(hdf['summary'])
             
-            summary=summary[['episode','reward']].rename(columns={'reward':str(i)})
+            summary=summary[['episode',key]].rename(columns={key:str(i)})
             if i == 0:
                 output=summary
             else:
