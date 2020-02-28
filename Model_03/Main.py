@@ -45,7 +45,8 @@ param_batch=[
     #{'name': 'n_cells_lstm', 'n':3, 'type':'parametric','method':'grid','min':36,'max':60}
     #{'name': 'n_cells_lstm', 'n':13, 'type':'parametric','method':'grid','min':12,'max':60}
     #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':4,'max':8}
-    {'name': 'n_cells_lstm', 'n':11, 'type':'parametric','method':'grid','min':1,'max':11}
+    #{'name': 'n_cells_lstm', 'n':11, 'type':'parametric','method':'grid','min':1,'max':11}
+    {'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':13,'max':36}
 ]
 
 
