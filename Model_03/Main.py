@@ -16,8 +16,8 @@ For batch simulations,
 # Parameters #########################################################
 ######################################################################
 
-#set_param_sim='param_sim.json'
-set_param_sim='param_sim_pic.json'
+set_param_sim='param_sim.json'
+#set_param_sim='param_sim_pic.json'
 #set_param_sim='param_sim_long.json'
 #set_param_sim='param_test.json'
 
@@ -33,8 +33,8 @@ set_param_mod='param_wang2018.json'
 #dir_restart='20200228_130159'
 dir_restart=None
 
-#dir_load='20200222_002120/20200222_122717'
-dir_load=None
+dir_load='20200222_002120/20200222_122717'
+#dir_load=None
 
 param_batch=[
     #{'name':'dummy_counter', 'n':3, 'type':'parametric', 'method':'grid', 'min':0,'max':2}
@@ -48,7 +48,7 @@ param_batch=[
     #{'name': 'n_cells_lstm', 'n':13, 'type':'parametric','method':'grid','min':12,'max':60}
     #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':4,'max':8}
     #{'name': 'n_cells_lstm', 'n':11, 'type':'parametric','method':'grid','min':1,'max':11}
-    {'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':13,'max':36}
+    {'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':2,'max':48}
 ]
 
 
@@ -191,7 +191,7 @@ class Sim():
         # Load source graph specs
         with open(os.path.join(self.path_save,self.param.dir_load,'parameters.json')) as f:
             dict_param=json.load(f)
-        n_cells_src=dict_param['n_cells_lstm']
+        n_cells_src=int(dict_param['n_cells_lstm'])
         n_actions=env_alias(self.param.config_environment).n_actions
 
         # Load source graph variables
@@ -214,7 +214,7 @@ class Sim():
         ary_kernel_dst,ary_bias_dst,ary_fc0_dst,ary_fc1_dst = list_ary_dst
 
         # Overwrite destination graph variable arrays, after deletion if necessary
-        n_cells_dst=self.param.n_cells_lstm
+        n_cells_dst=int(self.param.n_cells_lstm)
         if n_cells_dst==n_cells_src:
             ary_kernel_dst=ary_kernel_src
             ary_bias_dst=ary_bias_src
