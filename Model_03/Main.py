@@ -16,10 +16,10 @@ For batch simulations,
 # Parameters #########################################################
 ######################################################################
 
-set_param_sim='param_sim.json'
+#set_param_sim='param_sim.json'
+set_param_sim='param_sim_pic.json'
 #set_param_sim='param_sim_long.json'
 #set_param_sim='param_test.json'
-#set_param_sim='param_test_load.json'
 
 set_param_mod='param_wang2018.json'
 #set_param_mod='param_wang2018_parallel.json'
@@ -27,24 +27,28 @@ set_param_mod='param_wang2018.json'
 #dir_restart='20200219_223846'
 #dir_restart='20200221_234851'
 #dir_restart='20200222_002120'
+#dir_restart='20200222_233321'
+#dir_restart='20200224_234232'
+#dir_restart='20200226_161100'
+#dir_restart='20200228_130159'
 dir_restart=None
 
-dir_load='20200222_002120/20200222_122717'
-#dir_load=None
+#dir_load='20200222_002120/20200222_122717'
+dir_load=None
 
 param_batch=[
-    #{'name': 'learning_rate', 'n':11, 'type':'parametric','method':'grid','min':0.0002,'max':0.0052}
-    #{'name': 'learning_rate', 'n':10, 'type':'parametric','method':'grid','min':0.0057,'max':0.0102},
-    #{'name': 'learning_rate', 'n':100, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
-    #{'name': 'learning_rate', 'n':2, 'type':'parametric','method':'grid','min':0.0001,'max':0.0100},
     #{'name':'dummy_counter', 'n':3, 'type':'parametric', 'method':'grid', 'min':0,'max':2}
-    #{'name':'learning_rate', 'n':5, 'type':'parametric', 'method':'random', 'min':0.0001, 'max':0.001},
     #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
     #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
     #{'name': 'n_cells_lstm', 'n':20, 'type':'parametric','method':'grid','min':5,'max':100}
-    {'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
+    #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
-    #{'name': 'episode_stop', 'n':5, 'type':'parametric','method':'grid','min':50000,'max':0.01}
+    #{'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
+    #{'name': 'n_cells_lstm', 'n':3, 'type':'parametric','method':'grid','min':36,'max':60}
+    #{'name': 'n_cells_lstm', 'n':13, 'type':'parametric','method':'grid','min':12,'max':60}
+    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':4,'max':8}
+    #{'name': 'n_cells_lstm', 'n':11, 'type':'parametric','method':'grid','min':1,'max':11}
+    {'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':13,'max':36}
 ]
 
 
@@ -143,12 +147,15 @@ class Sim():
         if set_param_overwrite is not None:
             self.param.add_dict(set_param_overwrite)
         if dir_load is not None:
+            '''
             with open(os.path.join(path_save,dir_load,"parameters.json")) as f:
                 dict_param=json.load(f)
             episode_done=dict_param['episode_stop']
             episode_stop=episode_done+self.param.episode_stop
             print('episode_stop='+str(episode_done)+'+'+str(self.param.episode_stop))
             self.param.add_dict({'load_model':1,'dir_load':dir_load,'episode_stop':episode_stop})
+            '''
+            self.param.add_dict({'load_model':1,'dir_load':dir_load})
         else:
             self.param.add_dict({'load_model':0})
 
@@ -164,8 +171,88 @@ class Sim():
         with open(os.path.join(self.param.path_save,'parameters.json'), 'w') as fp:
             json.dump(self.param.__dict__, fp, indent=1)
 
+    def replace_uncontigious(self,ary_src,ary_rep,idx_row,idx_col):
+        ary_dst=ary_src
+        if len(idx_row)!=ary_rep.shape[0]:
+            print('idx_row and ary_rep 0th dim do not match: '+str(len(idx_row))+', '+str(ary_rep.shape[0]))
+        if len(idx_col)!=ary_rep.shape[1]:
+            print('idx_col and ary_rep 1st dim do not match: '+str(len(idx_col))+', '+str(ary_rep.shape[1]))
+        for i in range(len(idx_row)):
+            for j in range(len(idx_col)):
+                ary_dst[idx_row[i],idx_col[j]]=ary_rep[i,j]
+        return(ary_dst)
+
+    def load_graph(self,list_ary_dst,env_alias):
+        # Reshape saved graph variables to fit into newly initialized graph.
+        # Enabled for different LSTM cell numbers between saved and new graph,
+        # Which TF default loading does not support.
+
+        # Load source graph specs
+        with open(os.path.join(self.path_save,self.param.dir_load,'parameters.json')) as f:
+            dict_param=json.load(f)
+        n_cells_src=dict_param['n_cells_lstm']
+        n_actions=env_alias(self.param.config_environment).n_actions
+
+        # Load source graph variables
+        with pd.HDFStore(os.path.join(self.path_save,self.param.dir_load,'model/variable.h5')) as hdf:
+            df_var_src = pd.DataFrame(hdf['variable'])
+        df_var_src=df_var_src.loc[df_var_src['episode']==max(df_var_src['episode']),:]
+
+        # Reshape source graph variables into arrays
+        ary_var_src=np.asarray(df_var_src['value'],order='c').astype('float32')
+        ary_kernel_src,ary_bias_src,ary_fc0_src,ary_fc1_src=np.split(ary_var_src,
+                                                     [(n_actions+2+n_cells_src)*4*n_cells_src,
+                                                      (n_actions+3+n_cells_src)*4*n_cells_src,
+                                                      ((n_actions+3+n_cells_src)*4+n_actions)*n_cells_src])
+        ary_kernel_src=ary_kernel_src.reshape([n_actions+2+n_cells_src,4*n_cells_src])
+        ary_bias_src=ary_bias_src.reshape([4*n_cells_src])
+        ary_fc0_src=ary_fc0_src.reshape([n_cells_src,n_actions])
+        ary_fc1_src=ary_fc1_src.reshape([n_cells_src,1])
+
+        # Load variables from initialized destination graph
+        ary_kernel_dst,ary_bias_dst,ary_fc0_dst,ary_fc1_dst = list_ary_dst
+
+        # Overwrite destination graph variable arrays, after deletion if necessary
+        n_cells_dst=self.param.n_cells_lstm
+        if n_cells_dst==n_cells_src:
+            ary_kernel_dst=ary_kernel_src
+            ary_bias_dst=ary_bias_src
+            ary_fc0_dst=ary_fc0_src
+            ary_fc1_dst=ary_fc1_src
+            print("Preserved "+str(int(n_cells_src))+" LSTM cells.")
+        elif n_cells_dst<n_cells_src:
+            idx_del=np.arange(n_cells_dst,n_cells_src)
+            idx_del_4=[]
+            for i in range(4):
+                idx_del_4=np.concatenate([idx_del_4,idx_del+n_cells_src*i])
+
+            ary_kernel_dst=np.delete(ary_kernel_src,idx_del+n_actions+2,0)
+            ary_kernel_dst=np.delete(ary_kernel_dst,idx_del_4,1)
+            ary_bias_dst=np.delete(ary_bias_src,idx_del_4,0)
+            ary_fc0_dst=np.delete(ary_fc0_src,idx_del,0)
+            ary_fc1_dst=np.delete(ary_fc1_src,idx_del,0)
+            print("Deleted "+str(int(n_cells_src-n_cells_dst))+" LSTM cells.")
+        elif n_cells_dst>n_cells_src:
+            idx_ow=np.arange(n_cells_src)
+            idx_ow_4=[]
+            for i in range(4):
+                idx_ow_4=np.concatenate([idx_ow_4,idx_ow+n_cells_dst*i])
+            idx_ow_4=idx_ow_4.astype('int64')
+            ary_kernel_dst=self.replace_uncontigious(ary_kernel_dst,ary_kernel_src,
+                                                      np.concatenate([np.arange(n_actions+2),
+                                                                      idx_ow+n_actions+2]),
+                                                      idx_ow_4)
+            ary_bias_dst[idx_ow_4]=ary_bias_src
+            ary_fc0_dst=self.replace_uncontigious(ary_fc0_dst,ary_fc0_src,
+                                                   idx_ow,np.arange(n_actions))
+            ary_fc1_dst=self.replace_uncontigious(ary_fc1_dst,ary_fc1_src,
+                                                   idx_ow,[0])
+            print("Added "+str(int(n_cells_dst-n_cells_src))+" LSTM cells.")
+        
+        return([ary_kernel_dst,ary_bias_dst,ary_fc0_dst,ary_fc1_dst])
+
     def run(self):
-        print('Running: '+ self.param.datetime_start + '.')
+        print('Simulating: '+ self.param.datetime_start + '.')
         tf.reset_default_graph()
         # Setup agents for multiple threading
         with tf.device(self.param.xpu):
@@ -176,19 +263,20 @@ class Sim():
             elif self.param.optimizer == "RMSProp":
                 self.trainer = tf.train.RMSPropOptimizer(learning_rate=self.param.learning_rate)
             if self.param.environment == 'Two_Armed_Bandit':
-                agent_alias=Environment.Two_Armed_Bandit
+                env_alias=Environment.Two_Armed_Bandit
             elif self.param.environment == 'Dual_Assignment_with_Hold':
-                agent_alias=Environment.Dual_Assignment_with_Hold
+                env_alias=Environment.Dual_Assignment_with_Hold
+            # Generate master network
             self.master_network = Network.LSTM_RNN_Network(self.param,
-                                                agent_alias(self.param.config_environment).n_actions,
-                                                'master',None) # Generate master network
+                                                           env_alias(self.param.config_environment).n_actions,
+                                                           'master',None) 
             #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
             self.saver = tf.train.Saver(max_to_keep=5)
             self.agents = []
-            # Create A2C_Agent classes
+            # Create A2C_Agent classes (local network is defined within agent definition)
             for i in range(self.param.n_agents):
-                self.agents.append(Agent.A2C_Agent(i,self.param,agent_alias(self.param.config_environment),
-                                             self.trainer,self.saver,self.episode_global))
+                self.agents.append(Agent.A2C_Agent(i,self.param,env_alias(self.param.config_environment),
+                                                   self.trainer,self.saver,self.episode_global))
 
         # Run agents
         #config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
@@ -196,15 +284,27 @@ class Sim():
         with tf.Session(config=config) as sess:
             sess.run(tf.global_variables_initializer())
             if self.param.load_model == True:
-                #ckpt = tf.train.get_checkpoint_state(self.param.path_load+'/model')
+                # Load variables from initialized destination graph
+                vars_master = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,'master')
+                list_ary_dst=sess.run(vars_master)
+                # New original graph loading
+                list_ary_dst=self.load_graph(list_ary_dst,env_alias)
+                # Assign destination arrays to TF tensors
+                sess.run([vars_master[0].assign(list_ary_dst[0]),
+                          vars_master[1].assign(list_ary_dst[1]),
+                          vars_master[2].assign(list_ary_dst[2]),
+                          vars_master[3].assign(list_ary_dst[3])])
+
+                # TensorFlow default graph data loading
+                # Only for the same sized graph
+                '''
                 path_load=os.path.join(self.path_save,self.param.dir_load)
                 ckpt = tf.train.get_checkpoint_state(os.path.join(path_load,'model'))
                 self.saver.restore(sess,ckpt.model_checkpoint_path)
-                print('Loaded parameters: '+ self.param.dir_load + '.')
-            #else:
-                #sess.run(tf.global_variables_initializer())
+                '''
+                print('Loaded parameters from '+ self.param.dir_load + '.')
+
             coord = tf.train.Coordinator()
-            #if self.param.xpu=='/gpu:0' and self.param.n_agents==1:
             if self.param.n_agents==1:
                 self.agents[0].work(sess,coord)
             elif self.param.xpu=='/gpu:0' and self.param.n_agents>1:
@@ -217,7 +317,7 @@ class Sim():
                     thread.start()
                     agent_threads.append(thread)
                 coord.join(agent_threads)
-        print('Done single run: '+ self.param.datetime_start + '.')
+        print('Done single simulation: '+ self.param.datetime_start + '.')
 
 
 ######################################################################
@@ -242,13 +342,15 @@ class Batch():
             print('Unfinished runs: '+str(len(list_idx_rerun))+'.')
             for i in list_idx_rerun:
                 sr_append=self.batch_table.loc[i,:]
+                self.batch_table=self.batch_table.drop(i)
                 sr_append['datetime_start']=np.NaN
                 sr_append['run']=True
                 sr_append['done']=False
                 self.batch_table=self.batch_table.append(sr_append)
+
             self.batch_table=self.batch_table.reset_index(drop=True)
             self.save_batch_table()
-            print('Done batch setup for restart.')
+            print('Done batch setup in restarting mode.')
         else:
             print('dir_restart not found: '+dir_restart)
 
@@ -312,8 +414,8 @@ class Batch():
         list_idx_run=batch_table_run.index.values.tolist()
         for i in range(len(list_idx_run)):
             idx=list_idx_run[i]
-            print('Batch simulation: ' + str(i + 1) + '/' + str(len(list_idx_run)),'.')
             param_overwrite=self.batch_table.loc[idx,self.batch_table.columns.difference(['datetime_start','run','done'])].to_dict()
+            print('Batch simulation: ' + str(i + 1) + '/' + str(len(list_idx_run))+' '+str(param_overwrite))
             param_overwrite['path_save_batch']=self.path_save_batch
             sim=Sim(path_save_batch=self.path_save_batch,set_param_overwrite=param_overwrite)
             self.batch_table.loc[idx,'datetime_start']=sim.param.datetime_start

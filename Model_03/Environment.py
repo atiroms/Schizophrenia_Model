@@ -15,6 +15,7 @@ import moviepy.editor as mpy
 from PIL import Image
 from PIL import ImageDraw 
 from PIL import ImageFont
+import math
 
 
 ######################################################################

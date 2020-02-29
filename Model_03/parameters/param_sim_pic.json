@@ -5,7 +5,7 @@
     "train" : 1,
 
     "//":"Number of episodes to run: '100','50000','200000'",
-    "episode_stop" : 1000,
+    "episode_stop" : 50000,
 
     "//":"Interval to save simulation summary in original format: '1', '100'",
     "interval_summary":1,
@@ -14,7 +14,7 @@
     "interval_ckpt": 1000,
 
     "//":"Interval to save task pictures: '0','100'",
-    "interval_pic": 0,
+    "interval_pic": 100,
 
     "//":"Interval to save all activity within each episode: '0','1'",
     "interval_activity":100,

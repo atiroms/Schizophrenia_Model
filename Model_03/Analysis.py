@@ -40,17 +40,34 @@ for i in range(len(list_path_data)):
     elif i==len(list_path_data)-1:
         raise ValueError('Data folder does not exist in the list.')
 
-#dir_data = '20200216_191229'
-#dir_data = '20200216_204436'
-#dir_data = '20200216_233234' # n_lstm_cell 4, 15, ... 48
-#dir_data = '20200217_103834'
-#dir_data='20200218_212228' # n_lstm_cell 5, 10, ... 100
+#dir_data='20200216_191229'
+#dir_data='20200216_204436'
+#dir_data='20200216_233234' # n_cells_lstm 4, 15, ... 48
+#dir_data='20200217_103834'
+#dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
 #dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019
 #dir_data='20200220_230830' # learning_rate 0.0020, 0.0025, ... 0.0100
-#dir_data='20200221_234851' # test run
 #dir_data='20200222_002120' # three long runs (200000)
-#dir_data='20200222_214653' # test loading with multiple learning rates
-dir_data='20200222_232008' # test loading with fixed learning rate
+#dir_data='20200223_153711' # combined '20200219_223846' and '20200220_230830'
+#dir_data='20200222_233321' # learning_rate 0.0001, 0.0002, ... 0.0019 after loading '20200222_002120/20200222_122717'
+#dir_data='20200223_235457' # learning_rate 0.0020, 0.0025, ... 0.0100 after loading '20200222_002120/20200222_122717'
+#dir_data='20200224_220741' # combined '20200222_233321' and '20200223_235457'
+#dir_data='20200224_234232' # learning_rate 0.0150, 0.0200, ... 0.1000 after loading '20200222_002120/20200222_122717'
+#dir_data='20200226_153138' # n_cells_lstm 36,48,60 after loading '20200222_002120/20200222_122717'
+#dir_data='20200226_200910' # n_cells_lstm 12,16,...60 after loading '20200222_002120/20200222_122717'
+#dir_data='20200227_123416' # n_cells_lstm 4,8 after loading '20200222_002120/20200222_122717'
+#dir_data='20200227_151151' # combined '20200222_233321', '20200223_235457' and '20200224_234232' (learning_rate 0.0001-0.1000)
+#dir_data='20200227_150929' # combined '20200227_123416' and '20200226_200910' (n_cells_lstm 4-60)
+#dir_data='20200227_160031' # n_cells_lstm 1,2,..11 after loading '20200222_002120/20200222_122717'
+#dir_data='20200228_123122' # combined '20200227_160031' and '20200226_200910' (n_cells_lstm 1-60)
+#dir_data='20200228_130159' # n_cells_lstm 13,14,..36 after loading '20200222_002120/20200222_122717'
+
+dir_data='20200229_003524' # single run
+
+#list_dir_data=['20200219_223846','20200220_230830']
+#list_dir_data=['20200222_233321','20200223_235457','20200224_234232']
+#list_dir_data=['20200227_123416','20200226_200910']
+list_dir_data=['20200227_160031','20200226_200910']
 
 
 ######################################################################
@@ -72,20 +89,76 @@ import datetime
 
 
 ######################################################################
+# Combine multiple batches ###########################################
+######################################################################
+class BatchCombine():
+    def __init__(self, path_data=path_data,list_dir_data=list_dir_data):
+        self.path_data=path_data
+        self.df_batch=pd.DataFrame()
+        for dir_data in list_dir_data:
+            path_load_batch=os.path.join(path_data,dir_data)
+            if os.path.exists(path_load_batch):
+                # Read batch_table
+                with pd.HDFStore(os.path.join(path_load_batch,'batch_table.h5')) as hdf:
+                    df_batch_append = pd.DataFrame(hdf['batch_table'])
+                #df_batch_append=df_batch_append.loc[df_batch['done']==True,:]
+                self.df_batch=self.df_batch.append(df_batch_append)
+            else:
+                print("Batch dir does not exist: "+dir_data+".")
+        
+        self.df_batch=self.df_batch.reset_index(drop=True)
+        print('Detected '+str(len(self.df_batch))+' runs.')
+
+    def combine(self):
+        # Timestamping directory name
+        datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
+        self.path_save_batch=os.path.join(self.path_data,datetime_start)
+        if not os.path.exists(self.path_save_batch):
+            os.makedirs(self.path_save_batch)
+
+        hdf=pd.HDFStore(self.path_save_batch+'/batch_table.h5')
+        hdf.put('batch_table',self.df_batch,format='table',append=False,data_columns=True)
+        hdf.close()
+        print('Saved new batch table.')
+        print('Please copy subdirectories manually.')
+
+
+######################################################################
 # Batch data analysis ################################################
 ######################################################################
 
 class BatchAnalysis():
     def __init__(self, path_data=path_data,dir_data=dir_data,subset={}):
-        self.path=os.path.join(path_data,dir_data)
-        self.path_analysis=os.path.join(self.path,"analysis")
-        if not os.path.exists(self.path_analysis):
-            os.makedirs(self.path_analysis)
+        self.path_load_batch=os.path.join(path_data,dir_data)
+        self.path_save_analysis=os.path.join(self.path_load_batch,"analysis")
+        if not os.path.exists(self.path_save_analysis):
+            os.makedirs(self.path_save_analysis)
         self.subset=subset
 
-    def batch_load_reward(self):
+    def single_plot(self,key='reward',window=1000,padding=10):
+        with pd.HDFStore(self.path_load_batch+'/summary/summary.h5') as hdf:
+            summary = pd.DataFrame(hdf['summary'])
+        df_reward=summary[['episode',key]]
+
+        df_reward=self.ave_reward(df_reward,window=window,padding=padding)
+
+        print('Preparing line plot.')
+        #self.path=os.path.join(path_data,dir_data)
+        #self.df_ave=df_ave
+        fig=plt.figure(figsize=(5,2),dpi=100)
+        ax=fig.add_subplot(1,1,1)
+        ax.plot(df_reward['episode'],df_reward[key])
+        ax.set_title("Average reward, window: "+str(window)+", padding: "+str(padding))
+        ax.set_xlabel("Task episode")
+        ax.set_ylabel("Reward")
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.path_save_analysis,
+                                 "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_reward.png'))
+        plt.show()
+
+    def batch_load(self,key='reward'):
         # Read batch_table
-        with pd.HDFStore(os.path.join(self.path,'batch_table.h5')) as hdf:
+        with pd.HDFStore(os.path.join(self.path_load_batch,'batch_table.h5')) as hdf:
             df_batch = pd.DataFrame(hdf['batch_table'])
         #df_batch = df_batch.iloc[0:10,:]
         df_batch=df_batch.loc[df_batch['done']==True,:]
@@ -124,54 +197,54 @@ class BatchAnalysis():
         for i in tqdm(range(self.n_batch)):
             #print('\rLoading ' + str(i+1) + '/' + str(self.n_batch) + '                 ',end='')
             subdir=df_batch_subset['datetime_start'].iloc[i]
-            path=self.path + '/' + subdir
+            path=self.path_load_batch + '/' + subdir
             with pd.HDFStore(path+'/summary/summary.h5') as hdf:
                 summary = pd.DataFrame(hdf['summary'])
             
-            summary=summary[['episode','reward']].rename(columns={'reward':str(i)})
+            summary=summary[['episode',key]].rename(columns={key:str(i)})
             if i == 0:
                 output=summary
             else:
                 output=pd.merge(output,summary,how='outer', on='episode')
+        output['episode']=output['episode']-output.loc[0,'episode']
         print('Finished loading data.')
         #self.df_ave=MovAveEpisode(dataframe=self.summaries).output
         return(output)
 
-    def block_ave_reward(self,df_reward,window=100):
+    def ave_reward(self,df_reward,window=100,padding=10):
         self.win_ave=window
-        print('Calculating block averages over ' + str(window) + ' episodes.')
+        self.pad_ave=padding
+        # len = win + (n-1) * pad    >>     n = (len - win)/pad + 1
+        len_out=int((len(df_reward)-window)/padding+1)
+        print('Averaging reward, window: '+str(window)+', padding: '+str(padding)+', output: '+str(len_out)+'.')
         sleep(1)
         output=pd.DataFrame(columns=['episode_start','episode_stop']+df_reward.columns.tolist())
-        for i in tqdm(range(math.floor(len(df_reward)/window))):
-            output=output.append(pd.concat([pd.Series([i*window,(i+1)*window-1],index=['episode_start','episode_stop']),
-                                            df_reward.iloc[i*window:(i+1)*window,:].mean()]),ignore_index=True)
-        print('Finished calculating block averages.')
-        return(output)
-
-    def mov_ave_reward(self,df_reward,window=100):
-        self.win_ave=window
-        print('Calculating moving averages over ' + str(window) + ' episodes.')
-        sleep(1)
-        output=pd.DataFrame(columns=['episode_start','episode_stop']+df_reward.columns.tolist())
-        for i in tqdm(range(len(df_reward)-window+1)):
-            output=output.append(pd.concat([pd.Series([i,i+window-1],index=['episode_start','episode_stop']),
-                                            df_reward.iloc[i:(i+window),:].mean()]),ignore_index=True)
+        for i in tqdm(range(len_out)):
+            output=output.append(pd.concat([pd.Series([i*padding,i*padding+window-1],index=['episode_start','episode_stop']),
+                                            df_reward.iloc[i*padding:(i*padding+window),:].mean()]),ignore_index=True)
             #self.output=self.output.append(self.input.iloc[(self.interval*i):(self.interval*(i+1)),:].mean(),ignore_index=True)
-        print('Finished calculating moving averages.')
+        print('Finished averaging reward.')
         return(output)
 
-    def state_reward(self,df_reward,threshold=[65,67.5]):
+    def state_reward(self,df_reward,learned=False,threshold=[65,67.5]):
         self.thresh_reward=threshold
         print('Calculating disease states.')
         sleep(1)
         col_batch=df_reward.drop(['episode','episode_start','episode_stop'],axis=1).columns.tolist()
+        if learned:
+            state_init=[1,0,0]
+        else:
+            state_init=[0,-1,0]
         # State at each episode, 0: unlearned, 1: learned 2: psychotic 3: remitted
-        df_state=pd.DataFrame(0,columns=col_batch,index=df_reward.index).astype(int)
-        # State history, -1: never learned, 0: has learned, >1: N psychotic episodes
-        df_count=pd.DataFrame(-1,columns=col_batch,index=df_reward.index).astype(int)
+        df_state=pd.DataFrame(state_init[0],columns=col_batch,index=df_reward.index).astype(int)
+        # State history, -1: never learned, 0: has learned, N>0: N psychotic episodes
+        df_count=pd.DataFrame(state_init[1],columns=col_batch,index=df_reward.index).astype(int)
+        # Cumulative psychosis
+        df_cumul=pd.DataFrame(state_init[2],columns=col_batch,index=df_reward.index)
         #sr_state=pd.Series(-1,index=col_batch).astype(int)
         for i in tqdm(range(1,len(df_reward))):
             for col in col_batch:
+                df_cumul.loc[i,col]=df_cumul.loc[i-1,col]
                 if df_reward.loc[i,col]<threshold[0]:                           # Currently below threshold
                     if df_state.loc[i-1,col]==0 or df_state.loc[i-1,col]==2:    # Stayed below threshold
                         df_state.loc[i,col]=df_state.loc[i-1,col]                  # No change
@@ -179,6 +252,8 @@ class BatchAnalysis():
                     else:                                                       # Fell below threshold
                         df_state.loc[i,col]=2                                      # Fall psychotic                   
                         df_count.loc[i,col]=df_count.loc[i-1,col]+1                # Count up psychosis
+                    if df_state.loc[i,col]==2:                                   # Currently psychotic
+                        df_cumul.loc[i,col]=df_cumul.loc[i-1,col]+(threshold[0]-df_reward.loc[i,col])*self.pad_ave
                 elif df_reward.loc[i,col]>=threshold[1]:                        # Currently above threshold
                     if df_state.loc[i-1,col]==0 or df_state.loc[i-1,col]==2:    # Climbed above threshold
                         if df_count.loc[i-1,col]==-1:                                   # Learned for the first time
@@ -195,55 +270,57 @@ class BatchAnalysis():
                     df_count.loc[i,col]=df_count.loc[i-1,col]
         df_state=pd.concat([df_reward[['episode_start','episode_stop','episode']],df_state],axis=1)
         df_count=pd.concat([df_reward[['episode_start','episode_stop','episode']],df_count],axis=1)
+        df_cumul=pd.concat([df_reward[['episode_start','episode_stop','episode']],df_cumul],axis=1)
         print('Finished calculating disease states')
-        return([df_state,df_count])
+        return([df_state,df_count,df_cumul])
 
     def heatmap_reward(self,df_reward):
-        #self.path=os.path.join(path_data,dir_data)
-        #self.df_ave=df_ave
+        print('Preparing heatmap plot.')
         df_plot=df_reward.drop(['episode','episode_start','episode_stop'],axis=1).T
         df_plot.columns=df_reward['episode_start'].tolist()
         df_plot.index=self.label_batch
         self.df_plot=df_plot
-        fig=plt.figure(figsize=(6,4),dpi=100)
+        fig=plt.figure(figsize=(6,0.75+0.13*len(df_plot)),dpi=100)
         ax=fig.add_subplot(1,1,1)
-        heatmap=ax.pcolor(df_reward['episode_start'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow)
+        #heatmap=ax.pcolor(df_reward['episode_start'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow)
+        heatmap=ax.pcolor(df_reward['episode'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow_r)
         #ax.set_xticks(np.arange(df_plot.shape[1]), minor=False)
         ax.set_yticks(np.arange(df_plot.shape[0]) + 0.5, minor=False)
         ax.invert_yaxis()
         #ax.set_xticklabels([str(int(i)) for i in df_reward['episode_start'].tolist()], minor=False)
         ax.set_yticklabels(self.label_batch, minor=False)
-        ax.set_title("Average reward over "+str(self.win_ave)+" episodes")
+        ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
         ax.set_xlabel("Task episode")
-        ax.set_ylabel("Batch ("+self.title_batch+")")
+        ax.set_ylabel(self.title_batch)
         cbar=fig.colorbar(heatmap,ax=ax)
         cbar.set_label('Average reward')
         plt.tight_layout()
-        plt.savefig(os.path.join(self.path_analysis,
+        plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_heatmap.png'))
         plt.show()
 
     def plot_reward(self,df_reward):
+        print('Preparing line plot.')
         #self.path=os.path.join(path_data,dir_data)
         #self.df_ave=df_ave
-        fig=plt.figure(figsize=(6,4),dpi=100)
+        fig=plt.figure(figsize=(6,5),dpi=100)
         ax=fig.add_subplot(1,1,1)
         for i in range(self.n_batch):
             ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
                     color=cm.rainbow(i/self.n_batch))
-        ax.set_title("Average reward over "+str(self.win_ave)+" episodes")
+        ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
         ax.set_xlabel("Task episode")
         ax.set_ylabel("Reward")
         ax.legend(title=self.title_batch,labels=self.label_batch,
                   bbox_to_anchor=(1.05,1),loc='upper left')
         #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.path_analysis,
+        plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_reward.png'))
         plt.show()
 
     def plot_state(self,df_state):
-        fig=plt.figure(figsize=(6,4),dpi=100)
+        fig=plt.figure(figsize=(6,5),dpi=100)
         ax=fig.add_subplot(1,1,1)
         for i in range(self.n_batch):
             ax.plot(df_state['episode'],df_state.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
@@ -254,14 +331,14 @@ class BatchAnalysis():
         ax.set_xlabel("Task episode")
         ax.set_ylabel("State")
         ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left')
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=4)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.path_analysis,
+        plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_state.png'))
         plt.show()
 
     def plot_count(self,df_count):
-        fig=plt.figure(figsize=(6,4),dpi=100)
+        fig=plt.figure(figsize=(6,5),dpi=100)
         ax=fig.add_subplot(1,1,1)
         for i in range(self.n_batch):
             ax.plot(df_count['episode'],df_count.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
@@ -270,38 +347,56 @@ class BatchAnalysis():
         ax.set_xlabel("Task episode")
         ax.set_ylabel("Count of psychotic episodes")
         ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left')
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=4)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.path_analysis,
+        plt.savefig(os.path.join(self.path_save_analysis,
+                                 "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_cumul.png'))
+        plt.show()
+
+    def plot_cumulative(self,df_cumul):
+        fig=plt.figure(figsize=(6,5),dpi=100)
+        ax=fig.add_subplot(1,1,1)
+        for i in range(self.n_batch):
+            ax.plot(df_cumul['episode'],df_cumul.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
+                    color=cm.rainbow(i/self.n_batch))
+        ax.set_title("Cumulative psychosis duration x severity")
+        ax.set_xlabel("Task episode")
+        ax.set_ylabel("Duration x Severity")
+        ax.legend(title=self.title_batch,labels=self.label_batch,
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=4)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_count.png'))
         plt.show()
 
-    def pipe_state(self,window=1000):
-        df_batchreward=self.batch_load_reward()
-        df_batchrewardave=self.mov_ave_reward(df_batchreward,window=window)
-        data_state=self.state_reward(df_batchrewardave)
-        self.plot_reward(df_batchrewardave)
+    def pipe_state(self,window=1000,padding=10,learned=True,threshold=[65,67.5]):
+        df_batchreward=self.batch_load()
+        df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
+        data_state=self.state_reward(df_batchrewardave,learned=learned,threshold=threshold)
+        self.heatmap_reward(df_batchrewardave)
         self.plot_state(data_state[0])
         self.plot_count(data_state[1])
-
-    def pipe_mov(self,window=1000):
-        df_batchreward=self.batch_load_reward()
-        df_batchrewardave=self.mov_ave_reward(df_batchreward,window=window)
+        self.plot_cumulative(data_state[2])
+        return(data_state)
+        
+    def pipe_mov(self,window=1000,padding=10):
+        df_batchreward=self.batch_load()
+        df_batchrewardave=self.ave_reward(df_batchreward,window=window)
         self.plot_reward(df_batchrewardave)
 
-    def pipe_block(self,window=100):
-        df_batchreward=self.batch_load_reward()
-        df_batchrewardave=self.block_ave_reward(df_batchreward,window=window)
+    def pipe_block(self,window=100,padding=100):
+        df_batchreward=self.batch_load()
+        df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
         self.plot_reward(df_batchrewardave)
 
-    def pipe_hm_mov(self,window=100):
-        df_batchreward=self.batch_load_reward()
-        df_batchrewardave=self.mov_ave_reward(df_batchreward,window=window)
+    def pipe_hm_mov(self,window=1000,padding=10):
+        df_batchreward=self.batch_load()
+        df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
         self.heatmap_reward(df_batchrewardave)
 
-    def pipe_hm_block(self,window=100):
-        df_batchreward=self.batch_load_reward()
-        df_batchrewardave=self.block_ave_reward(df_batchreward,window=window)
+    def pipe_hm_block(self,window=100,padding=100):
+        df_batchreward=self.batch_load()
+        df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
         self.heatmap_reward(df_batchrewardave)
 
 
