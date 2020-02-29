@@ -92,6 +92,7 @@ import datetime
 import time
 import pandas as pd
 import json
+import random
 import Agent
 import Network
 import Environment
@@ -221,11 +222,13 @@ class Sim():
             ary_fc1_dst=ary_fc1_src
             print("Preserved "+str(int(n_cells_src))+" LSTM cells.")
         elif n_cells_dst<n_cells_src:
-            idx_del=np.arange(n_cells_dst,n_cells_src)
+            # idx_del=np.arange(n_cells_dst,n_cells_src)
+            idx_del=random.sample(np.arange(n_cells_src).tolist(),n_cells_src-n_cells_dst)
+            idx_del=np.sort(np.asarray(idx_del,dtype='int64'))
             idx_del_4=[]
             for i in range(4):
                 idx_del_4=np.concatenate([idx_del_4,idx_del+n_cells_src*i])
-
+            idx_del_4=idx_del_4.astype('int64')
             ary_kernel_dst=np.delete(ary_kernel_src,idx_del+n_actions+2,0)
             ary_kernel_dst=np.delete(ary_kernel_dst,idx_del_4,1)
             ary_bias_dst=np.delete(ary_bias_src,idx_del_4,0)
@@ -233,7 +236,9 @@ class Sim():
             ary_fc1_dst=np.delete(ary_fc1_src,idx_del,0)
             print("Deleted "+str(int(n_cells_src-n_cells_dst))+" LSTM cells.")
         elif n_cells_dst>n_cells_src:
-            idx_ow=np.arange(n_cells_src)
+            #idx_ow=np.arange(n_cells_src)
+            idx_ow=random.sample(np.arange(n_cells_dst).tolist(),n_cells_src)
+            idx_ow=np.sort(np.asarray(idx_ow,dtype='int64'))
             idx_ow_4=[]
             for i in range(4):
                 idx_ow_4=np.concatenate([idx_ow_4,idx_ow+n_cells_dst*i])
