@@ -42,7 +42,7 @@ for i in range(len(list_path_data)):
 
 #dir_data='20200216_191229'
 #dir_data='20200216_204436'
-dir_data='20200216_233234' # n_cells_lstm 4, 15, ... 48
+#dir_data='20200216_233234' # n_cells_lstm 4, 15, ... 48
 #dir_data='20200217_103834'
 #dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
 #dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019
@@ -60,7 +60,9 @@ dir_data='20200216_233234' # n_cells_lstm 4, 15, ... 48
 #dir_data='20200227_150929' # combined '20200227_123416' and '20200226_200910' (n_cells_lstm 4-60)
 #dir_data='20200227_160031' # n_cells_lstm 1,2,..11 after loading '20200222_002120/20200222_122717'
 #dir_data='20200228_123122' # combined '20200227_160031' and '20200226_200910' (n_cells_lstm 1-60)
-dir_data='20200228_130159' # n_cells_lstm 13,14,..36 after loading '20200222_002120/20200222_122717'
+#dir_data='20200228_130159' # n_cells_lstm 13,14,..36 after loading '20200222_002120/20200222_122717'
+
+dir_data='20200229_003524' # single run
 
 #list_dir_data=['20200219_223846','20200220_230830']
 #list_dir_data=['20200222_233321','20200223_235457','20200224_234232']
@@ -133,7 +135,28 @@ class BatchAnalysis():
             os.makedirs(self.path_save_analysis)
         self.subset=subset
 
-    def batch_load_reward(self,key='reward'):
+    def single_plot(self,key='reward',window=1000,padding=10):
+        with pd.HDFStore(self.path_load_batch+'/summary/summary.h5') as hdf:
+            summary = pd.DataFrame(hdf['summary'])
+        df_reward=summary[['episode',key]]
+
+        df_reward=self.ave_reward(df_reward,window=window,padding=padding)
+
+        print('Preparing line plot.')
+        #self.path=os.path.join(path_data,dir_data)
+        #self.df_ave=df_ave
+        fig=plt.figure(figsize=(5,2),dpi=100)
+        ax=fig.add_subplot(1,1,1)
+        ax.plot(df_reward['episode'],df_reward[key])
+        ax.set_title("Average reward, window: "+str(window)+", padding: "+str(padding))
+        ax.set_xlabel("Task episode")
+        ax.set_ylabel("Reward")
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.path_save_analysis,
+                                 "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_reward.png'))
+        plt.show()
+
+    def batch_load(self,key='reward'):
         # Read batch_table
         with pd.HDFStore(os.path.join(self.path_load_batch,'batch_table.h5')) as hdf:
             df_batch = pd.DataFrame(hdf['batch_table'])
@@ -257,7 +280,7 @@ class BatchAnalysis():
         df_plot.columns=df_reward['episode_start'].tolist()
         df_plot.index=self.label_batch
         self.df_plot=df_plot
-        fig=plt.figure(figsize=(6,0.15*len(df_plot)),dpi=100)
+        fig=plt.figure(figsize=(6,0.75+0.13*len(df_plot)),dpi=100)
         ax=fig.add_subplot(1,1,1)
         #heatmap=ax.pcolor(df_reward['episode_start'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow)
         heatmap=ax.pcolor(df_reward['episode'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow_r)
@@ -347,7 +370,7 @@ class BatchAnalysis():
         plt.show()
 
     def pipe_state(self,window=1000,padding=10,learned=True,threshold=[65,67.5]):
-        df_batchreward=self.batch_load_reward()
+        df_batchreward=self.batch_load()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
         data_state=self.state_reward(df_batchrewardave,learned=learned,threshold=threshold)
         self.heatmap_reward(df_batchrewardave)
@@ -357,22 +380,22 @@ class BatchAnalysis():
         return(data_state)
         
     def pipe_mov(self,window=1000,padding=10):
-        df_batchreward=self.batch_load_reward()
+        df_batchreward=self.batch_load()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window)
         self.plot_reward(df_batchrewardave)
 
     def pipe_block(self,window=100,padding=100):
-        df_batchreward=self.batch_load_reward()
+        df_batchreward=self.batch_load()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
         self.plot_reward(df_batchrewardave)
 
     def pipe_hm_mov(self,window=1000,padding=10):
-        df_batchreward=self.batch_load_reward()
+        df_batchreward=self.batch_load()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
         self.heatmap_reward(df_batchrewardave)
 
     def pipe_hm_block(self,window=100,padding=100):
-        df_batchreward=self.batch_load_reward()
+        df_batchreward=self.batch_load()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
         self.heatmap_reward(df_batchrewardave)
 

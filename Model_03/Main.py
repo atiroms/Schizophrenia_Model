@@ -16,7 +16,8 @@ For batch simulations,
 # Parameters #########################################################
 ######################################################################
 
-set_param_sim='param_sim.json'
+#set_param_sim='param_sim.json'
+set_param_sim='param_sim_pic.json'
 #set_param_sim='param_sim_long.json'
 #set_param_sim='param_test.json'
 
@@ -29,11 +30,11 @@ set_param_mod='param_wang2018.json'
 #dir_restart='20200222_233321'
 #dir_restart='20200224_234232'
 #dir_restart='20200226_161100'
-dir_restart='20200228_130159'
-#dir_restart=None
+#dir_restart='20200228_130159'
+dir_restart=None
 
-dir_load='20200222_002120/20200222_122717'
-#dir_load=None
+#dir_load='20200222_002120/20200222_122717'
+dir_load=None
 
 param_batch=[
     #{'name':'dummy_counter', 'n':3, 'type':'parametric', 'method':'grid', 'min':0,'max':2}
