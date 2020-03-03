@@ -61,15 +61,15 @@ for i in range(len(list_path_data)):
 #dir_data='20200228_123122' # combined '20200227_160031' and '20200226_200910' (n_cells_lstm 1-60)
 #dir_data='20200228_130159' # n_cells_lstm 13,14,..36 after loading '20200222_002120/20200222_122717'
 #dir_data='20200229_210037' # combined '20200227_160031' and '20200228_130159' n_cells_lstm 1,2,..36 after loading '20200222_002120/20200222_122717'
-#dir_data=''  # learning_rate 0.0150, 0.0200, ... 0.1000
+dir_data='20200302_062250'  # learning_rate 0.0150, 0.0200, ... 0.1000
 
 # Loding from pre-calculated data
 #dir_data='20200229_214730' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
 #dir_data='20200227_151151' # learning_rate 0.0001-0.1000 after loading (combined '20200222_233321', '20200223_235457' and '20200224_234232')
 
 # Raw simulation
-dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
-#dir_data='' # learning_rate 0.0001-0.1000 (combined '20200219_223846', '20200220_230830' and '')
+#dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
+dir_data='20200303_174857' # learning_rate 0.0001-0.1000 (combined '20200219_223846', '20200220_230830' and '')
 
 #dir_data='20200229_003524' # single run
 
@@ -78,7 +78,7 @@ dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
 #list_dir_data=['20200227_123416','20200226_200910']
 #list_dir_data=['20200227_160031','20200226_200910']
 #list_dir_data=['20200227_160031','20200228_130159']
-list_dir_data=['20200219_223846','20200220_230830','']
+list_dir_data=['20200219_223846','20200220_230830','20200302_062250']
 
 
 ######################################################################
@@ -119,6 +119,7 @@ class BatchCombine():
                 print("Batch dir does not exist: "+dir_data+".")
         
         self.df_batch=self.df_batch.reset_index(drop=True)
+        self.df_batch=self.df_batch.drop('run',axis=1)
         print('Detected '+str(len(self.df_batch))+' runs.')
 
     def combine(self):
@@ -127,7 +128,6 @@ class BatchCombine():
         self.path_save_batch=os.path.join(self.path_data,datetime_start)
         if not os.path.exists(self.path_save_batch):
             os.makedirs(self.path_save_batch)
-
         hdf=pd.HDFStore(self.path_save_batch+'/batch_table.h5')
         hdf.put('batch_table',self.df_batch,format='table',append=False,data_columns=True)
         hdf.close()
