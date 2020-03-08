@@ -61,17 +61,18 @@ for i in range(len(list_path_data)):
 #dir_data='20200228_123122' # combined '20200227_160031' and '20200226_200910' (n_cells_lstm 1-60)
 #dir_data='20200228_130159' # n_cells_lstm 13,14,..36 after loading '20200222_002120/20200222_122717'
 #dir_data='20200229_210037' # combined '20200227_160031' and '20200228_130159' n_cells_lstm 1,2,..36 after loading '20200222_002120/20200222_122717'
-dir_data='20200302_062250'  # learning_rate 0.0150, 0.0200, ... 0.1000
+#dir_data='20200302_062250'  # learning_rate 0.0150, 0.0200, ... 0.1000
 
 # Loding from pre-calculated data
-#dir_data='20200229_214730' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
+dir_data='20200229_214730' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
 #dir_data='20200227_151151' # learning_rate 0.0001-0.1000 after loading (combined '20200222_233321', '20200223_235457' and '20200224_234232')
 
 # Raw simulation
 #dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
-dir_data='20200303_174857' # learning_rate 0.0001-0.1000 (combined '20200219_223846', '20200220_230830' and '')
+#dir_data='20200303_174857' # learning_rate 0.0001-0.1000 (combined '20200219_223846', '20200220_230830' and '')
 
 #dir_data='20200229_003524' # single run
+#dir_data='20200229_214730/20200301_012501' # n_cells_lstm=8
 
 #list_dir_data=['20200219_223846','20200220_230830']
 #list_dir_data=['20200222_233321','20200223_235457','20200224_234232']
@@ -380,21 +381,33 @@ class BatchAnalysis():
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_heatmap.png'))
         plt.show()
 
-    def plot_reward(self,df_reward):
+    def plot_reward(self,df_reward,select_col=[0,1,3,10,17]):
         print('Preparing line plot.')
         #self.path=os.path.join(path_data,dir_data)
         #self.df_ave=df_ave
         fig=plt.figure(figsize=(6,5),dpi=100)
         ax=fig.add_subplot(1,1,1)
-        for i in range(self.n_batch):
-            ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
-                    color=cm.rainbow(i/self.n_batch))
-        ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
-        ax.set_xlabel("Task episode")
-        ax.set_ylabel("Reward")
-        ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left')
-        #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
+        if select_col is not None:
+            for i in range(len(select_col)):
+                ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,select_col[i]],
+                        color=cm.rainbow(i/len(select_col)))
+            ax.invert_yaxis()
+            ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
+            ax.set_xlabel("Task episode")
+            ax.set_ylabel("Reward")
+            ax.legend(title=self.title_batch,labels=[self.label_batch[i] for i in select_col],
+                      bbox_to_anchor=(1.05,1),loc='upper left')
+            #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
+        else:
+            for i in range(self.n_batch):
+                ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
+                        color=cm.rainbow(i/self.n_batch))
+            ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
+            ax.set_xlabel("Task episode")
+            ax.set_ylabel("Reward")
+            ax.legend(title=self.title_batch,labels=self.label_batch,
+                      bbox_to_anchor=(1.05,1),loc='upper left')
+            #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_reward.png'))
