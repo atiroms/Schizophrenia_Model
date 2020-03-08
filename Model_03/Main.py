@@ -16,8 +16,8 @@ For batch simulations,
 # Parameters #########################################################
 ######################################################################
 
-#set_param_sim='param_sim.json'
-set_param_sim='param_sim_pic.json'
+set_param_sim='param_sim.json'
+#set_param_sim='param_sim_pic.json'
 #set_param_sim='param_sim_long.json'
 #set_param_sim='param_test.json'
 
@@ -31,6 +31,8 @@ set_param_mod='param_wang2018.json'
 #dir_restart='20200224_234232'
 #dir_restart='20200226_161100'
 #dir_restart='20200228_130159'
+#dir_restart='20200229_214730'
+#dir_restart='20200302_062250'
 dir_restart=None
 
 #dir_load='20200222_002120/20200222_122717'
@@ -48,7 +50,8 @@ param_batch=[
     #{'name': 'n_cells_lstm', 'n':13, 'type':'parametric','method':'grid','min':12,'max':60}
     #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':4,'max':8}
     #{'name': 'n_cells_lstm', 'n':11, 'type':'parametric','method':'grid','min':1,'max':11}
-    {'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':13,'max':36}
+    #{'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':2,'max':48}
+    {'name': 'n_cells_lstm', 'n':10, 'type':'parametric','method':'grid','min':110,'max':200}
 ]
 
 
@@ -92,6 +95,7 @@ import datetime
 import time
 import pandas as pd
 import json
+import random
 import Agent
 import Network
 import Environment
@@ -190,7 +194,7 @@ class Sim():
         # Load source graph specs
         with open(os.path.join(self.path_save,self.param.dir_load,'parameters.json')) as f:
             dict_param=json.load(f)
-        n_cells_src=dict_param['n_cells_lstm']
+        n_cells_src=int(dict_param['n_cells_lstm'])
         n_actions=env_alias(self.param.config_environment).n_actions
 
         # Load source graph variables
@@ -213,7 +217,7 @@ class Sim():
         ary_kernel_dst,ary_bias_dst,ary_fc0_dst,ary_fc1_dst = list_ary_dst
 
         # Overwrite destination graph variable arrays, after deletion if necessary
-        n_cells_dst=self.param.n_cells_lstm
+        n_cells_dst=int(self.param.n_cells_lstm)
         if n_cells_dst==n_cells_src:
             ary_kernel_dst=ary_kernel_src
             ary_bias_dst=ary_bias_src
@@ -221,11 +225,13 @@ class Sim():
             ary_fc1_dst=ary_fc1_src
             print("Preserved "+str(int(n_cells_src))+" LSTM cells.")
         elif n_cells_dst<n_cells_src:
-            idx_del=np.arange(n_cells_dst,n_cells_src)
+            # idx_del=np.arange(n_cells_dst,n_cells_src)
+            idx_del=random.sample(np.arange(n_cells_src).tolist(),n_cells_src-n_cells_dst)
+            idx_del=np.sort(np.asarray(idx_del,dtype='int64'))
             idx_del_4=[]
             for i in range(4):
                 idx_del_4=np.concatenate([idx_del_4,idx_del+n_cells_src*i])
-
+            idx_del_4=idx_del_4.astype('int64')
             ary_kernel_dst=np.delete(ary_kernel_src,idx_del+n_actions+2,0)
             ary_kernel_dst=np.delete(ary_kernel_dst,idx_del_4,1)
             ary_bias_dst=np.delete(ary_bias_src,idx_del_4,0)
@@ -233,7 +239,9 @@ class Sim():
             ary_fc1_dst=np.delete(ary_fc1_src,idx_del,0)
             print("Deleted "+str(int(n_cells_src-n_cells_dst))+" LSTM cells.")
         elif n_cells_dst>n_cells_src:
-            idx_ow=np.arange(n_cells_src)
+            #idx_ow=np.arange(n_cells_src)
+            idx_ow=random.sample(np.arange(n_cells_dst).tolist(),n_cells_src)
+            idx_ow=np.sort(np.asarray(idx_ow,dtype='int64'))
             idx_ow_4=[]
             for i in range(4):
                 idx_ow_4=np.concatenate([idx_ow_4,idx_ow+n_cells_dst*i])

@@ -44,7 +44,7 @@ for i in range(len(list_path_data)):
 #dir_data='20200216_204436'
 #dir_data='20200216_233234' # n_cells_lstm 4, 15, ... 48
 #dir_data='20200217_103834'
-#dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
+
 #dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019
 #dir_data='20200220_230830' # learning_rate 0.0020, 0.0025, ... 0.0100
 #dir_data='20200222_002120' # three long runs (200000)
@@ -56,18 +56,33 @@ for i in range(len(list_path_data)):
 #dir_data='20200226_153138' # n_cells_lstm 36,48,60 after loading '20200222_002120/20200222_122717'
 #dir_data='20200226_200910' # n_cells_lstm 12,16,...60 after loading '20200222_002120/20200222_122717'
 #dir_data='20200227_123416' # n_cells_lstm 4,8 after loading '20200222_002120/20200222_122717'
-#dir_data='20200227_151151' # combined '20200222_233321', '20200223_235457' and '20200224_234232' (learning_rate 0.0001-0.1000)
 #dir_data='20200227_150929' # combined '20200227_123416' and '20200226_200910' (n_cells_lstm 4-60)
 #dir_data='20200227_160031' # n_cells_lstm 1,2,..11 after loading '20200222_002120/20200222_122717'
 #dir_data='20200228_123122' # combined '20200227_160031' and '20200226_200910' (n_cells_lstm 1-60)
 #dir_data='20200228_130159' # n_cells_lstm 13,14,..36 after loading '20200222_002120/20200222_122717'
+#dir_data='20200229_210037' # combined '20200227_160031' and '20200228_130159' n_cells_lstm 1,2,..36 after loading '20200222_002120/20200222_122717'
+#dir_data='20200302_062250'  # learning_rate 0.0150, 0.0200, ... 0.1000
+#dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
+#dir_data='20200303_183303' # n_cells_lstm 110,120, ... 200
 
-dir_data='20200229_003524' # single run
+# Loding from pre-calculated data
+dir_data='20200229_214730' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
+#dir_data='20200227_151151' # learning_rate 0.0001-0.1000 after loading (combined '20200222_233321', '20200223_235457' and '20200224_234232')
+
+# Raw simulation
+dir_data='20200304_080520' # n_cells_lstm 5-200 (combined '20200218_212228' and '20200303_183303')
+#dir_data='20200303_174857' # learning_rate 0.0001-0.1000 (combined '20200219_223846', '20200220_230830' and '')
+
+#dir_data='20200229_003524' # single run
+#dir_data='20200229_214730/20200301_012501' # n_cells_lstm=8
 
 #list_dir_data=['20200219_223846','20200220_230830']
 #list_dir_data=['20200222_233321','20200223_235457','20200224_234232']
 #list_dir_data=['20200227_123416','20200226_200910']
-list_dir_data=['20200227_160031','20200226_200910']
+#list_dir_data=['20200227_160031','20200226_200910']
+#list_dir_data=['20200227_160031','20200228_130159']
+#list_dir_data=['20200219_223846','20200220_230830','20200302_062250']
+list_dir_data=['20200218_212228','20200303_183303']
 
 
 ######################################################################
@@ -82,6 +97,7 @@ import matplotlib.cm as cm
 from tqdm import tqdm
 from time import sleep
 import datetime
+import scipy.stats as stats
 #import tensorflow as tf
 #import plotly as py
 #import cufflinks as cf
@@ -107,6 +123,7 @@ class BatchCombine():
                 print("Batch dir does not exist: "+dir_data+".")
         
         self.df_batch=self.df_batch.reset_index(drop=True)
+        self.df_batch=self.df_batch.drop('run',axis=1)
         print('Detected '+str(len(self.df_batch))+' runs.')
 
     def combine(self):
@@ -115,7 +132,6 @@ class BatchCombine():
         self.path_save_batch=os.path.join(self.path_data,datetime_start)
         if not os.path.exists(self.path_save_batch):
             os.makedirs(self.path_save_batch)
-
         hdf=pd.HDFStore(self.path_save_batch+'/batch_table.h5')
         hdf.put('batch_table',self.df_batch,format='table',append=False,data_columns=True)
         hdf.close()
@@ -166,8 +182,8 @@ class BatchAnalysis():
 
         # Subset batch table by keys and values specified in 'subset'
         if len(self.subset)>0:
-            for key in list(self.subset.keys()):
-                df_batch_subset=df_batch.loc[df_batch[key]==self.subset[key]]
+            for key_subset in list(self.subset.keys()):
+                df_batch_subset=df_batch.loc[df_batch[key_subset]==self.subset[key_subset]]
         else:
             df_batch_subset=df_batch
         column_batchlabel=df_batch_subset.columns.tolist()
@@ -210,6 +226,75 @@ class BatchAnalysis():
         print('Finished loading data.')
         #self.df_ave=MovAveEpisode(dataframe=self.summaries).output
         return(output)
+
+    def reward_prob(self,window=1000,padding=10,prob_comp=1/3):
+        self.win_ave=window
+        self.pad_ave=padding
+        df_reward=self.batch_load(key='reward')
+        df_arm=self.batch_load(key='prob_arm0')
+        len_out=int((len(df_reward)-window)/padding+1)
+        list_column=df_reward.columns.tolist()
+        list_column.remove('episode')
+        df_ave=pd.DataFrame(columns=['episode_start','episode_stop']+df_reward.columns.tolist())
+        df_ave_difficult=pd.DataFrame(columns=['episode_start','episode_stop']+df_reward.columns.tolist())
+        df_ave_easy=pd.DataFrame(columns=['episode_start','episode_stop']+df_reward.columns.tolist())
+        df_ave_diff=pd.DataFrame(columns=['episode_start','episode_stop']+df_reward.columns.tolist())
+        df_ave_ratio=pd.DataFrame(columns=['episode_start','episode_stop']+df_reward.columns.tolist())
+        df_slope=pd.DataFrame(columns=['episode_start','episode_stop']+df_reward.columns.tolist())
+
+        print('Calculating averages and slopes.')
+        sleep(1)
+        for i in tqdm(range(len_out)):
+            ave_append=[df_reward['episode'].iloc[i*padding],
+                        df_reward['episode'].iloc[i*padding+window-1],
+                        df_reward['episode'].iloc[i*padding:(i*padding+window)].mean()]
+            ave_difficult_append=ave_append
+            ave_easy_append=ave_append
+            ave_diff_append=ave_append
+            ave_ratio_append=ave_append
+            slope_append=ave_append
+
+            for column in list_column:
+                reward_window=df_reward[column].iloc[i*padding:(i*padding+window)].tolist()
+                arm0_window=df_arm[column].iloc[i*padding:(i*padding+window)].tolist()
+                armdiff_window=[abs(arm0-0.5)*2 for arm0 in arm0_window]
+                ave=np.mean(reward_window)
+
+                reward_window=np.array(reward_window)
+                armdiff_window=np.array(armdiff_window)
+                ave_difficult=reward_window[armdiff_window<prob_comp].mean()
+                ave_easy=reward_window[armdiff_window>(1-prob_comp)].mean()
+                ave_diff=ave_easy-ave_difficult
+                ave_ratio=ave_easy/ave_difficult
+                slope, intercept, r_value, p_avlue, std_err=stats.linregress(armdiff_window,reward_window)
+
+                ave_append=ave_append+[ave]
+                ave_difficult_append=ave_difficult_append+[ave_difficult]
+                ave_easy_append=ave_easy_append+[ave_easy]
+                ave_diff_append=ave_diff_append+[ave_diff]
+                ave_ratio_append=ave_ratio_append+[ave_ratio]
+                slope_append=slope_append+[slope]
+
+            df_ave=df_ave.append(pd.Series(ave_append,index=['episode_start','episode_stop','episode']+list_column),ignore_index=True)
+            df_ave_difficult=df_ave_difficult.append(pd.Series(ave_difficult_append,index=['episode_start','episode_stop','episode']+list_column),ignore_index=True)
+            df_ave_easy=df_ave_easy.append(pd.Series(ave_easy_append,index=['episode_start','episode_stop','episode']+list_column),ignore_index=True)
+            df_ave_diff=df_ave_diff.append(pd.Series(ave_diff_append,index=['episode_start','episode_stop','episode']+list_column),ignore_index=True)
+            df_ave_ratio=df_ave_ratio.append(pd.Series(ave_ratio_append,index=['episode_start','episode_stop','episode']+list_column),ignore_index=True)
+            df_slope=df_slope.append(pd.Series(slope_append,index=['episode_start','episode_stop','episode']+list_column),ignore_index=True)
+        print('Finished calculating averages and slopes of rewards.')
+
+        self.plot_reward(df_ave)
+        sleep(1)
+        self.plot_reward(df_ave_difficult)
+        sleep(1)
+        self.plot_reward(df_ave_easy)
+        sleep(1)
+        self.plot_reward(df_ave_diff)
+        sleep(1)
+        self.plot_reward(df_ave_ratio)
+        sleep(1)
+        self.plot_reward(df_slope)
+        return([df_ave,df_ave_difficult,df_ave_easy,df_ave_diff,df_ave_ratio,df_slope])
 
     def ave_reward(self,df_reward,window=100,padding=10):
         self.win_ave=window
@@ -299,21 +384,33 @@ class BatchAnalysis():
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_heatmap.png'))
         plt.show()
 
-    def plot_reward(self,df_reward):
+    def plot_reward(self,df_reward,select_col=[0,1,3,10,17]):
         print('Preparing line plot.')
         #self.path=os.path.join(path_data,dir_data)
         #self.df_ave=df_ave
         fig=plt.figure(figsize=(6,5),dpi=100)
         ax=fig.add_subplot(1,1,1)
-        for i in range(self.n_batch):
-            ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
-                    color=cm.rainbow(i/self.n_batch))
-        ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
-        ax.set_xlabel("Task episode")
-        ax.set_ylabel("Reward")
-        ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left')
-        #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
+        if select_col is not None:
+            for i in range(len(select_col)):
+                ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,select_col[i]],
+                        color=cm.rainbow(i/len(select_col)))
+            ax.invert_yaxis()
+            ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
+            ax.set_xlabel("Task episode")
+            ax.set_ylabel("Reward")
+            ax.legend(title=self.title_batch,labels=[self.label_batch[i] for i in select_col],
+                      bbox_to_anchor=(1.05,1),loc='upper left')
+            #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
+        else:
+            for i in range(self.n_batch):
+                ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
+                        color=cm.rainbow(i/self.n_batch))
+            ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
+            ax.set_xlabel("Task episode")
+            ax.set_ylabel("Reward")
+            ax.legend(title=self.title_batch,labels=self.label_batch,
+                      bbox_to_anchor=(1.05,1),loc='upper left')
+            #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_reward.png'))
