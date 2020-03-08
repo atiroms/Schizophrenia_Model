@@ -32,8 +32,8 @@ set_param_mod='param_wang2018.json'
 #dir_restart='20200226_161100'
 #dir_restart='20200228_130159'
 #dir_restart='20200229_214730'
-dir_restart='20200302_062250'
-#dir_restart=None
+#dir_restart='20200302_062250'
+dir_restart=None
 
 #dir_load='20200222_002120/20200222_122717'
 dir_load=None
@@ -45,12 +45,13 @@ param_batch=[
     #{'name': 'n_cells_lstm', 'n':20, 'type':'parametric','method':'grid','min':5,'max':100}
     #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
-    {'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
+    #{'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
     #{'name': 'n_cells_lstm', 'n':3, 'type':'parametric','method':'grid','min':36,'max':60}
     #{'name': 'n_cells_lstm', 'n':13, 'type':'parametric','method':'grid','min':12,'max':60}
     #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':4,'max':8}
     #{'name': 'n_cells_lstm', 'n':11, 'type':'parametric','method':'grid','min':1,'max':11}
     #{'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':2,'max':48}
+    {'name': 'n_cells_lstm', 'n':10, 'type':'parametric','method':'grid','min':110,'max':200}
 ]
 
 
