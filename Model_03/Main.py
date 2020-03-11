@@ -275,7 +275,7 @@ class Sim():
             elif self.param.environment == 'Dual_Assignment_with_Hold':
                 env_alias=Environment.Dual_Assignment_with_Hold
             # Generate master network
-            self.master_network = Network.LSTM_RNN_Network(self.param,
+            self.master_network = Network.LSTM_RNN(self.param,
                                                            env_alias(self.param.config_environment).n_actions,
                                                            'master',None) 
             #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads

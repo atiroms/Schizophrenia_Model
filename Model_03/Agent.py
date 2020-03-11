@@ -39,7 +39,7 @@ class A2C_Agent():
         #self.summary_writer = tf.summary.FileWriter(self.param.path_save+"/summary/"+self.name)
 
         # Create the local copy of the network and the tensorflow op to copy master paramters to local network
-        self.local_AC = Network.LSTM_RNN_Network(self.param,self.n_actions,self.name,trainer)
+        self.local_AC = Network.LSTM_RNN(self.param,self.n_actions,self.name,trainer)
         #self.update_local_ops = update_target_graph('master',self.name)
         
         from_vars = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, 'master')

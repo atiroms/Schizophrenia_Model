@@ -33,7 +33,7 @@ def normalized_columns_initializer(std=1.0):
 # LSTM-RNN network ###################################################
 ######################################################################
 
-class LSTM_RNN_Network():
+class LSTM_RNN():
     def __init__(self,param,n_actions,scope,trainer):
         self.param=param
         with tf.compat.v1.variable_scope(scope):
