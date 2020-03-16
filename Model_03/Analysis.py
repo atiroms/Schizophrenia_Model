@@ -61,16 +61,25 @@ for i in range(len(list_path_data)):
 #dir_data='20200228_123122' # combined '20200227_160031' and '20200226_200910' (n_cells_lstm 1-60)
 #dir_data='20200228_130159' # n_cells_lstm 13,14,..36 after loading '20200222_002120/20200222_122717'
 #dir_data='20200229_210037' # combined '20200227_160031' and '20200228_130159' n_cells_lstm 1,2,..36 after loading '20200222_002120/20200222_122717'
-#dir_data='20200302_062250'  # learning_rate 0.0150, 0.0200, ... 0.1000
+#dir_data='20200302_062250' # learning_rate 0.0150, 0.0200, ... 0.1000
 #dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
 #dir_data='20200303_183303' # n_cells_lstm 110,120, ... 200
+#dir_data='20200314_202238' # n_cells_lstm 24, long run (unstable)
+#dir_data='20200314_202309' # n_cells_lstm 24, long run (unstable)
+#dir_data='20200314_202346' # n_cells_lstm 24, long run (stable)
 
 # Loding from pre-calculated data
-dir_data='20200229_214730' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
+#dir_data='20200229_214730' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
+#dir_data='20200311_234904' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
+#dir_data='20200311_235109' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
+#dir_data='20200311_235702' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
+#dir_data='20200315_112129' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
+#dir_data='20200315_112201' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
+dir_data='20200315_112233' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
 #dir_data='20200227_151151' # learning_rate 0.0001-0.1000 after loading (combined '20200222_233321', '20200223_235457' and '20200224_234232')
 
 # Raw simulation
-dir_data='20200304_080520' # n_cells_lstm 5-200 (combined '20200218_212228' and '20200303_183303')
+#dir_data='20200304_080520' # n_cells_lstm 5-200 (combined '20200218_212228' and '20200303_183303')
 #dir_data='20200303_174857' # learning_rate 0.0001-0.1000 (combined '20200219_223846', '20200220_230830' and '')
 
 #dir_data='20200229_003524' # single run
