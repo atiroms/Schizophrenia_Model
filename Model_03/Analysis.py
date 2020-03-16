@@ -40,12 +40,14 @@ for i in range(len(list_path_data)):
     elif i==len(list_path_data)-1:
         raise ValueError('Data folder does not exist in the list.')
 
+dir_data='20200315_112233' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
+
+list_dir_data=['20200218_212228','20200303_183303']
 
 
 ######################################################################
 # Libraries ##########################################################
 ######################################################################
-
 import numpy as np
 import pandas as pd
 import math
@@ -55,10 +57,8 @@ from tqdm import tqdm
 from time import sleep
 import datetime
 import scipy.stats as stats
+import json
 
-dir_data='20200315_112233' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
-
-list_dir_data=['20200218_212228','20200303_183303']
 
 ######################################################################
 # Combine multiple batches ###########################################
@@ -101,6 +101,7 @@ class BatchCombine():
 
 class BatchAnalysis():
     def __init__(self, path_data=path_data,dir_data=dir_data,subset={}):
+        self.path_data=path_data
         self.path_load_batch=os.path.join(path_data,dir_data)
         self.path_save_analysis=os.path.join(self.path_load_batch,"analysis")
         if not os.path.exists(self.path_save_analysis):
@@ -128,7 +129,7 @@ class BatchAnalysis():
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_reward.png'))
         plt.show()
 
-    def batch_load(self,key='reward'):
+    def batch_load(self,key='reward',len_precalc=5000):
         # Read batch_table
         with pd.HDFStore(os.path.join(self.path_load_batch,'batch_table.h5')) as hdf:
             df_batch = pd.DataFrame(hdf['batch_table'])
@@ -148,6 +149,8 @@ class BatchAnalysis():
                 column_batchlabel.remove(column)
 
         self.n_batch=len(df_batch_subset)
+
+        # Create batch label and title for later plotting
         label_batch=None
         for column in column_batchlabel:
             if max(df_batch_subset[column].tolist())>1:
@@ -170,10 +173,28 @@ class BatchAnalysis():
             #print('\rLoading ' + str(i+1) + '/' + str(self.n_batch) + '                 ',end='')
             subdir=df_batch_subset['datetime_start'].iloc[i]
             path=self.path_load_batch + '/' + subdir
+
+            # Load summary data
             with pd.HDFStore(path+'/summary/summary.h5') as hdf:
                 summary = pd.DataFrame(hdf['summary'])
-            
             summary=summary[['episode',key]].rename(columns={key:str(i)})
+
+            # When the data is from pre-learned model, concatenate the last specified episodes before the data
+            with open(os.path.join(path,'parameters.json')) as f:
+                dict_param=json.load(f)
+            if 'dir_load' in dict_param.keys():
+                dir_load=dict_param['dir_load']
+                path_precalc=os.path.join(self.path_data,dir_load)
+                with pd.HDFStore(path_precalc+'/summary/summary.h5') as hdf:
+                    summary_precalc = pd.DataFrame(hdf['summary'])
+                summary_precalc=summary_precalc[['episode',key]].rename(columns={key:str(i)})
+                summary_precalc=summary_precalc.iloc[-len_precalc:,:]
+                diff_precalc=max(summary_precalc['episode'])+1
+                summary_precalc['episode']=summary_precalc['episode']-diff_precalc
+                summary=pd.concat([summary_precalc,summary])
+                summary=summary.reset_index(drop=True)
+
+            # Horizontally concatenate the loaded data
             if i == 0:
                 output=summary
             else:
