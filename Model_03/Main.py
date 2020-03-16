@@ -26,17 +26,6 @@ set_param_sim='param_sim.json'
 set_param_mod='param_wang2018_small.json'
 #set_param_mod='param_wang2018_parallel.json'
 
-#dir_restart='20200219_223846'
-#dir_restart='20200221_234851'
-#dir_restart='20200222_002120'
-#dir_restart='20200222_233321'
-#dir_restart='20200224_234232'
-#dir_restart='20200226_161100'
-#dir_restart='20200228_130159'
-#dir_restart='20200229_214730'
-#dir_restart='20200302_062250'
-#dir_restart='20200311_234904'
-#dir_restart='20200311_235109'
 #dir_restart='20200311_235702'
 dir_restart=None
 
