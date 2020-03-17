@@ -40,55 +40,14 @@ for i in range(len(list_path_data)):
     elif i==len(list_path_data)-1:
         raise ValueError('Data folder does not exist in the list.')
 
-#dir_data='20200216_191229'
-#dir_data='20200216_204436'
-#dir_data='20200216_233234' # n_cells_lstm 4, 15, ... 48
-#dir_data='20200217_103834'
+dir_data='20200315_112233' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
 
-#dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019
-#dir_data='20200220_230830' # learning_rate 0.0020, 0.0025, ... 0.0100
-#dir_data='20200222_002120' # three long runs (200000)
-#dir_data='20200223_153711' # combined '20200219_223846' and '20200220_230830'
-#dir_data='20200222_233321' # learning_rate 0.0001, 0.0002, ... 0.0019 after loading '20200222_002120/20200222_122717'
-#dir_data='20200223_235457' # learning_rate 0.0020, 0.0025, ... 0.0100 after loading '20200222_002120/20200222_122717'
-#dir_data='20200224_220741' # combined '20200222_233321' and '20200223_235457'
-#dir_data='20200224_234232' # learning_rate 0.0150, 0.0200, ... 0.1000 after loading '20200222_002120/20200222_122717'
-#dir_data='20200226_153138' # n_cells_lstm 36,48,60 after loading '20200222_002120/20200222_122717'
-#dir_data='20200226_200910' # n_cells_lstm 12,16,...60 after loading '20200222_002120/20200222_122717'
-#dir_data='20200227_123416' # n_cells_lstm 4,8 after loading '20200222_002120/20200222_122717'
-#dir_data='20200227_150929' # combined '20200227_123416' and '20200226_200910' (n_cells_lstm 4-60)
-#dir_data='20200227_160031' # n_cells_lstm 1,2,..11 after loading '20200222_002120/20200222_122717'
-#dir_data='20200228_123122' # combined '20200227_160031' and '20200226_200910' (n_cells_lstm 1-60)
-#dir_data='20200228_130159' # n_cells_lstm 13,14,..36 after loading '20200222_002120/20200222_122717'
-#dir_data='20200229_210037' # combined '20200227_160031' and '20200228_130159' n_cells_lstm 1,2,..36 after loading '20200222_002120/20200222_122717'
-#dir_data='20200302_062250'  # learning_rate 0.0150, 0.0200, ... 0.1000
-#dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
-#dir_data='20200303_183303' # n_cells_lstm 110,120, ... 200
-
-# Loding from pre-calculated data
-dir_data='20200229_214730' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
-#dir_data='20200227_151151' # learning_rate 0.0001-0.1000 after loading (combined '20200222_233321', '20200223_235457' and '20200224_234232')
-
-# Raw simulation
-dir_data='20200304_080520' # n_cells_lstm 5-200 (combined '20200218_212228' and '20200303_183303')
-#dir_data='20200303_174857' # learning_rate 0.0001-0.1000 (combined '20200219_223846', '20200220_230830' and '')
-
-#dir_data='20200229_003524' # single run
-#dir_data='20200229_214730/20200301_012501' # n_cells_lstm=8
-
-#list_dir_data=['20200219_223846','20200220_230830']
-#list_dir_data=['20200222_233321','20200223_235457','20200224_234232']
-#list_dir_data=['20200227_123416','20200226_200910']
-#list_dir_data=['20200227_160031','20200226_200910']
-#list_dir_data=['20200227_160031','20200228_130159']
-#list_dir_data=['20200219_223846','20200220_230830','20200302_062250']
 list_dir_data=['20200218_212228','20200303_183303']
 
 
 ######################################################################
 # Libraries ##########################################################
 ######################################################################
-
 import numpy as np
 import pandas as pd
 import math
@@ -98,10 +57,7 @@ from tqdm import tqdm
 from time import sleep
 import datetime
 import scipy.stats as stats
-#import tensorflow as tf
-#import plotly as py
-#import cufflinks as cf
-#import glob
+import json
 
 
 ######################################################################
@@ -145,6 +101,7 @@ class BatchCombine():
 
 class BatchAnalysis():
     def __init__(self, path_data=path_data,dir_data=dir_data,subset={}):
+        self.path_data=path_data
         self.path_load_batch=os.path.join(path_data,dir_data)
         self.path_save_analysis=os.path.join(self.path_load_batch,"analysis")
         if not os.path.exists(self.path_save_analysis):
@@ -172,7 +129,7 @@ class BatchAnalysis():
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_reward.png'))
         plt.show()
 
-    def batch_load(self,key='reward'):
+    def batch_load(self,key='reward',len_precalc=5000):
         # Read batch_table
         with pd.HDFStore(os.path.join(self.path_load_batch,'batch_table.h5')) as hdf:
             df_batch = pd.DataFrame(hdf['batch_table'])
@@ -192,6 +149,8 @@ class BatchAnalysis():
                 column_batchlabel.remove(column)
 
         self.n_batch=len(df_batch_subset)
+
+        # Create batch label and title for later plotting
         label_batch=None
         for column in column_batchlabel:
             if max(df_batch_subset[column].tolist())>1:
@@ -214,10 +173,28 @@ class BatchAnalysis():
             #print('\rLoading ' + str(i+1) + '/' + str(self.n_batch) + '                 ',end='')
             subdir=df_batch_subset['datetime_start'].iloc[i]
             path=self.path_load_batch + '/' + subdir
+
+            # Load summary data
             with pd.HDFStore(path+'/summary/summary.h5') as hdf:
                 summary = pd.DataFrame(hdf['summary'])
-            
             summary=summary[['episode',key]].rename(columns={key:str(i)})
+
+            # When the data is from pre-learned model, concatenate the last specified episodes before the data
+            with open(os.path.join(path,'parameters.json')) as f:
+                dict_param=json.load(f)
+            if 'dir_load' in dict_param.keys():
+                dir_load=dict_param['dir_load']
+                path_precalc=os.path.join(self.path_data,dir_load)
+                with pd.HDFStore(path_precalc+'/summary/summary.h5') as hdf:
+                    summary_precalc = pd.DataFrame(hdf['summary'])
+                summary_precalc=summary_precalc[['episode',key]].rename(columns={key:str(i)})
+                summary_precalc=summary_precalc.iloc[-len_precalc:,:]
+                diff_precalc=max(summary_precalc['episode'])+1
+                summary_precalc['episode']=summary_precalc['episode']-diff_precalc
+                summary=pd.concat([summary_precalc,summary])
+                summary=summary.reset_index(drop=True)
+
+            # Horizontally concatenate the loaded data
             if i == 0:
                 output=summary
             else:
