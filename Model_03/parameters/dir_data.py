@@ -10,9 +10,12 @@
 
 #dir_data='20200315_112129' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
 #dir_data='20200315_112201' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
-dir_data='20200315_112233' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
+#dir_data='20200315_112233' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
 
 #dir_data='20200227_151151' # learning_rate 0.0001-0.1000 after loading (combined '20200222_233321', '20200223_235457' and '20200224_234232')
+#dir_data='20200318_170259' # learning_rate 0.0001-0.1000 after loading '20200314_202346'
+
+#dir_data='20200315_112233' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
 
 # Raw simulation to compare with pre-calculated
 #dir_data='20200304_080520' # n_cells_lstm 5-200 (combined '20200218_212228' and '20200303_183303')
@@ -73,4 +76,5 @@ dir_data='20200315_112233' # n_cells_lstm 2,4,..24 random deletion after loading
 #list_dir_data=['20200227_160031','20200226_200910']
 #list_dir_data=['20200227_160031','20200228_130159']
 #list_dir_data=['20200219_223846','20200220_230830','20200302_062250']
-list_dir_data=['20200218_212228','20200303_183303']
+#list_dir_data=['20200218_212228','20200303_183303']
+list_dir_data=['20200316_231639','20200316_231745','20200316_231815']

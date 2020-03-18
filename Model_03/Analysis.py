@@ -40,9 +40,12 @@ for i in range(len(list_path_data)):
     elif i==len(list_path_data)-1:
         raise ValueError('Data folder does not exist in the list.')
 
-dir_data='20200315_112233' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
+dir_data='20200229_214730' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
+#dir_data='20200315_112233' # n_cells_lstm 2,4,..24 random deletion after loading '20200314_202346'
+#dir_data='20200318_170259' # learning_rate 0.0001-0.1000 after loading '20200314_202346'
 
-list_dir_data=['20200218_212228','20200303_183303']
+#list_dir_data=['20200218_212228','20200303_183303']
+list_dir_data=['20200316_231639','20200316_231745','20200316_231815']
 
 
 ######################################################################
@@ -199,7 +202,7 @@ class BatchAnalysis():
                 output=summary
             else:
                 output=pd.merge(output,summary,how='outer', on='episode')
-        output['episode']=output['episode']-output.loc[0,'episode']
+        #output['episode']=output['episode']-output.loc[0,'episode']
         print('Finished loading data.')
         #self.df_ave=MovAveEpisode(dataframe=self.summaries).output
         return(output)
@@ -361,33 +364,24 @@ class BatchAnalysis():
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_heatmap.png'))
         plt.show()
 
-    def plot_reward(self,df_reward,select_col=[0,1,3,10,17]):
+    def plot_reward(self,df_reward,select_col=None):
         print('Preparing line plot.')
         #self.path=os.path.join(path_data,dir_data)
         #self.df_ave=df_ave
         fig=plt.figure(figsize=(6,5),dpi=100)
         ax=fig.add_subplot(1,1,1)
-        if select_col is not None:
-            for i in range(len(select_col)):
-                ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,select_col[i]],
-                        color=cm.rainbow(i/len(select_col)))
-            ax.invert_yaxis()
-            ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
-            ax.set_xlabel("Task episode")
-            ax.set_ylabel("Reward")
-            ax.legend(title=self.title_batch,labels=[self.label_batch[i] for i in select_col],
-                      bbox_to_anchor=(1.05,1),loc='upper left')
-            #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
-        else:
-            for i in range(self.n_batch):
-                ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
-                        color=cm.rainbow(i/self.n_batch))
-            ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
-            ax.set_xlabel("Task episode")
-            ax.set_ylabel("Reward")
-            ax.legend(title=self.title_batch,labels=self.label_batch,
-                      bbox_to_anchor=(1.05,1),loc='upper left')
-            #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
+        if select_col is None:
+            select_col=[i for i in range(self.n_batch)]
+        for i in range(len(select_col)):
+            ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,select_col[i]],
+                    color=cm.rainbow(i/len(select_col)))
+        ax.invert_yaxis()
+        ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
+        ax.set_xlabel("Task episode")
+        ax.set_ylabel("Reward")
+        ax.legend(title=self.title_batch,labels=[self.label_batch[i] for i in select_col],
+                  bbox_to_anchor=(1.05,1),loc='upper left')
+        #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_reward.png'))
@@ -443,25 +437,26 @@ class BatchAnalysis():
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_count.png'))
         plt.show()
 
-    def pipe_state(self,window=1000,padding=10,learned=True,threshold=[65,67.5]):
+    def pipe_state(self,window=1000,padding=10,learned=True,threshold=[65,67.5],select_col=[0,1,3,10,17]):
         df_batchreward=self.batch_load()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
         data_state=self.state_reward(df_batchrewardave,learned=learned,threshold=threshold)
         self.heatmap_reward(df_batchrewardave)
+        self.plot_reward(df_batchrewardave,select_col=select_col)
         self.plot_state(data_state[0])
         self.plot_count(data_state[1])
         self.plot_cumulative(data_state[2])
         return(data_state)
         
-    def pipe_mov(self,window=1000,padding=10):
+    def pipe_mov(self,window=1000,padding=10,select_col=[0,1,3,10,17]):
         df_batchreward=self.batch_load()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window)
-        self.plot_reward(df_batchrewardave)
+        self.plot_reward(df_batchrewardave,select_col=select_col)
 
-    def pipe_block(self,window=100,padding=100):
+    def pipe_block(self,window=100,padding=100,select_col=[0,1,3,10,17]):
         df_batchreward=self.batch_load()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
-        self.plot_reward(df_batchrewardave)
+        self.plot_reward(df_batchrewardave,select_col=select_col)
 
     def pipe_hm_mov(self,window=1000,padding=10):
         df_batchreward=self.batch_load()

@@ -27,7 +27,10 @@ set_param_mod='param_wang2018_small.json'
 #set_param_mod='param_wang2018_parallel.json'
 
 #dir_restart='20200311_235702'
-dir_restart=None
+#dir_restart='20200316_231639'
+#dir_restart='20200316_231745'
+dir_restart='20200316_231815'
+#dir_restart=None
 
 #dir_load='20200222_002120/20200222_122717'
 dir_load='20200314_202346'
@@ -37,17 +40,19 @@ param_batch=[
     #{'name':'dummy_counter', 'n':3, 'type':'parametric', 'method':'grid', 'min':0,'max':2}
     #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
     #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
-    #{'name': 'n_cells_lstm', 'n':20, 'type':'parametric','method':'grid','min':5,'max':100}
+    
     #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
-    #{'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
+    {'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
+
     #{'name': 'n_cells_lstm', 'n':3, 'type':'parametric','method':'grid','min':36,'max':60}
     #{'name': 'n_cells_lstm', 'n':13, 'type':'parametric','method':'grid','min':12,'max':60}
     #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':4,'max':8}
     #{'name': 'n_cells_lstm', 'n':11, 'type':'parametric','method':'grid','min':1,'max':11}
     #{'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':2,'max':48}
     #{'name': 'n_cells_lstm', 'n':10, 'type':'parametric','method':'grid','min':110,'max':200}
-    {'name': 'n_cells_lstm', 'n':12, 'type':'parametric','method':'grid','min':2,'max':24}
+    #{'name': 'n_cells_lstm', 'n':20, 'type':'parametric','method':'grid','min':5,'max':100}
+    #{'name': 'n_cells_lstm', 'n':12, 'type':'parametric','method':'grid','min':2,'max':24}
 ]
 
 
