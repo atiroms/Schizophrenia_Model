@@ -19,8 +19,8 @@ For batch simulations,
 #set_param_sim='param_sim.json'
 #set_param_sim='param_sim_gpu.json'
 #set_param_sim='param_sim_pic.json'
-#set_param_sim='param_sim_long.json'
-set_param_sim='param_test.json'
+set_param_sim='param_sim_long.json'
+#set_param_sim='param_test.json'
 
 set_param_mod='param_wang2018.json'
 #set_param_mod='param_wang2018_small.json'
@@ -31,27 +31,27 @@ batch_restart=None
 
 #dir_load='20200222_002120/20200222_122717'
 #dir_load='20200314_202346'
-dir_load='20200320_191800'
-#dir_load=None
+dir_load=None
 
 param_batch=[
     #{'name':'dummy_counter', 'n':3, 'type':'parametric', 'method':'grid', 'min':0,'max':2}
-    #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
-    #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
-    
+
+    #{'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':2,'max':48}
+    #{'name': 'n_cells_lstm', 'n':12, 'type':'parametric','method':'grid','min':2,'max':24}
+    #{'name': 'n_cells_lstm', 'n':3, 'type':'parametric','method':'grid','min':12,'max':16}
+    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':18,'max':20}
+    {'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':22,'max':24}
+
     #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
     #{'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
 
-    #{'name': 'n_cells_lstm', 'n':3, 'type':'parametric','method':'grid','min':36,'max':60}
-    #{'name': 'n_cells_lstm', 'n':13, 'type':'parametric','method':'grid','min':12,'max':60}
-    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':4,'max':8}
-    #{'name': 'n_cells_lstm', 'n':11, 'type':'parametric','method':'grid','min':1,'max':11}
-    #{'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':2,'max':48}
-    #{'name': 'n_cells_lstm', 'n':10, 'type':'parametric','method':'grid','min':110,'max':200}
-    #{'name': 'n_cells_lstm', 'n':20, 'type':'parametric','method':'grid','min':5,'max':100}
-    #{'name': 'n_cells_lstm', 'n':12, 'type':'parametric','method':'grid','min':2,'max':24}
-    {'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':12,'max':14}
+    #{'name': 'learning_rate', 'n':14, 'type':'parametric','method':'grid','min':0.0007,'max':0.0020},
+
+    #{'name':'dir_load', 'n':2, 'type':'list','list':['20200319_171859/20200319_171859','20200319_171859/20200319_171859']}
+
+    #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
+    #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
 ]
 
 
@@ -145,6 +145,13 @@ class Sim():
 
         # Setup parameters in Parmeters object
         self.param=Parameters()
+
+        if set_param_overwrite is not None:
+            if 'dir_load' in set_param_overwrite.keys():
+                dir_load=set_param_overwrite['dir_load']
+
+        # Inherit param_mod contents of previous run when dir_load is specified globally, or included as a batch parameter
+        # param_sim contents are not inherited and overwritten by those defined globally
         if dir_load is None:
             self.param.add_json(set_param_sim,path_code)
             self.param.add_json(set_param_mod,path_code)
@@ -153,6 +160,7 @@ class Sim():
             with open(os.path.join(path_save,dir_load,"parameters.json")) as f:
                 dict_param=json.load(f)
             self.param.add_dict(dict_param)
+            self.param.add_json(set_param_sim,path_code)
             self.param.add_dict({'load_model':1,'dir_load':dir_load})
 
         self.param.add_dict({'datetime_start':datetime_start, 'path_save':path_save_run})

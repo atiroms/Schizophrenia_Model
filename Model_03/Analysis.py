@@ -41,8 +41,9 @@ for i in range(len(list_path_data)):
         raise ValueError('Data folder does not exist in the list.')
 
 #dir_data='20200319_171859' # n_cells_lstm 12,14 long run
-dir_data='20200319_171942' # n_cells_lstm 12,14 long run
+#dir_data='20200319_171942' # n_cells_lstm 12,14 long run
 #dir_data='20200319_172028' # n_cells_lstm 12,14 long run
+dir_data='20200320_213734'
 
 #list_dir_data=['20200218_212228','20200303_183303']
 list_dir_data=['20200319_005003','20200319_005038','20200319_005114']
@@ -156,15 +157,19 @@ class BatchAnalysis():
         # Create batch label and title for later plotting
         label_batch=None
         for column in column_batchlabel:
-            if max(df_batch_subset[column].tolist())>1:
-                regex='{0:.0f}'
+            if type(df_batch_subset[column].tolist()[0])==str:
+                label_batch_column=df_batch_subset[column].tolist()
             else:
-                regex='{:.4f}'
+                if max(df_batch_subset[column].tolist())>1:
+                    regex='{0:.0f}'
+                else:
+                    regex='{:.4f}'
+                label_batch_column=[regex.format(b) for b in df_batch_subset[column].tolist()]
             if label_batch is None:
-                label_batch=[regex.format(b) for b in df_batch_subset[column].tolist()]
+                label_batch=label_batch_column
                 title_batch=column
             else:
-                label_batch=[a+'_'+regex.format(b) for a,b in zip(label_batch,df_batch_subset[column].tolist())]
+                label_batch=[a+'_'+b for a,b in zip(label_batch,label_batch_column)]
                 title_batch=title_batch+'_'+column
         self.label_batch=label_batch
         self.title_batch=title_batch
@@ -185,7 +190,8 @@ class BatchAnalysis():
             # When the data is from pre-learned model, concatenate the last specified episodes before the data
             with open(os.path.join(path,'parameters.json')) as f:
                 dict_param=json.load(f)
-            if 'dir_load' in dict_param.keys():
+            if dict_param.load_model:    
+            #if 'dir_load' in dict_param.keys():
                 dir_load=dict_param['dir_load']
                 path_precalc=os.path.join(self.path_data,dir_load)
                 with pd.HDFStore(path_precalc+'/summary/summary.h5') as hdf:
