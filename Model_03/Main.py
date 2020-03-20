@@ -19,22 +19,20 @@ For batch simulations,
 #set_param_sim='param_sim.json'
 #set_param_sim='param_sim_gpu.json'
 #set_param_sim='param_sim_pic.json'
-set_param_sim='param_sim_long.json'
-#set_param_sim='param_test.json'
+#set_param_sim='param_sim_long.json'
+set_param_sim='param_test.json'
 
 set_param_mod='param_wang2018.json'
 #set_param_mod='param_wang2018_small.json'
 #set_param_mod='param_wang2018_parallel.json'
 
-#dir_restart='20200311_235702'
-#dir_restart='20200316_231639'
-#dir_restart='20200316_231745'
-#dir_restart='20200316_231815'
-dir_restart=None
+#batch_restart='20200311_235702'
+batch_restart=None
 
 #dir_load='20200222_002120/20200222_122717'
 #dir_load='20200314_202346'
-dir_load=None
+dir_load='20200320_191800'
+#dir_load=None
 
 param_batch=[
     #{'name':'dummy_counter', 'n':3, 'type':'parametric', 'method':'grid', 'min':0,'max':2}
@@ -108,9 +106,8 @@ import Environment
 ######################################################################
 
 class Parameters():
-    def __init__(self,set_param,path_code=path_code):
+    def __init__(self):
         self.set=None
-        self.add_json(set_param,path_code)
 
     def add_dict(self,dict_param):
         for key,value in dict_param.items():
@@ -147,24 +144,21 @@ class Sim():
         self.path_save=path_save
 
         # Setup parameters in Parmeters object
-        self.param=Parameters(set_param_sim,path_code)
-        self.param.add_json(set_param_mod,path_code)
-        self.param.add_dict({'datetime_start':datetime_start, 'path_save':path_save_run})
-        if set_param_overwrite is not None:
-            self.param.add_dict(set_param_overwrite)
-        if dir_load is not None:
-            '''
+        self.param=Parameters()
+        if dir_load is None:
+            self.param.add_json(set_param_sim,path_code)
+            self.param.add_json(set_param_mod,path_code)
+            self.param.add_dict({'load_model':0,'dir_load':''})
+        else:
             with open(os.path.join(path_save,dir_load,"parameters.json")) as f:
                 dict_param=json.load(f)
-            episode_done=dict_param['episode_stop']
-            episode_stop=episode_done+self.param.episode_stop
-            print('episode_stop='+str(episode_done)+'+'+str(self.param.episode_stop))
-            self.param.add_dict({'load_model':1,'dir_load':dir_load,'episode_stop':episode_stop})
-            '''
+            self.param.add_dict(dict_param)
             self.param.add_dict({'load_model':1,'dir_load':dir_load})
-        else:
-            self.param.add_dict({'load_model':0})
 
+        self.param.add_dict({'datetime_start':datetime_start, 'path_save':path_save_run})
+        
+        if set_param_overwrite is not None:
+            self.param.add_dict(set_param_overwrite)
 
         # Make directories for saving
         if not os.path.exists(self.param.path_save):
@@ -336,14 +330,14 @@ class Sim():
 
 class Batch():
     def __init__(self,param_batch=param_batch,path_save=path_save,
-                 dir_restart=dir_restart):
-        if dir_restart is None:
+                 batch_restart=batch_restart):
+        if batch_restart is None:
             self.prep(param_batch=param_batch,path_save=path_save)
         else:
-            self.prep_restart(dir_restart=dir_restart,path_save=path_save)
+            self.prep_restart(batch_restart=batch_restart,path_save=path_save)
 
-    def prep_restart(self,dir_restart,path_save):
-        self.path_save_batch=os.path.join(path_save,dir_restart)
+    def prep_restart(self,batch_restart,path_save):
+        self.path_save_batch=os.path.join(path_save,batch_restart)
         if os.path.exists(os.path.join(self.path_save_batch,"batch_table.h5")):
             with pd.HDFStore(os.path.join(self.path_save_batch,"batch_table.h5")) as hdf:
                 self.batch_table = pd.DataFrame(hdf['batch_table'])
@@ -362,7 +356,7 @@ class Batch():
             self.save_batch_table()
             print('Done batch setup in restarting mode.')
         else:
-            print('dir_restart not found: '+dir_restart)
+            print('batch_restart not found: '+batch_restart)
 
     def prep(self,param_batch=param_batch,path_save=path_save):
         self.n_param=len(param_batch)
