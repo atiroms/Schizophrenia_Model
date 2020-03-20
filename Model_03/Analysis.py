@@ -40,12 +40,12 @@ for i in range(len(list_path_data)):
     elif i==len(list_path_data)-1:
         raise ValueError('Data folder does not exist in the list.')
 
-#dir_data='20200315_112129' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
-#dir_data='20200315_112201' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
-dir_data='20200315_112233' # n_cells_lstm 2,4,..24 random deletion after loading 20200314_202346'
+#dir_data='20200319_171859' # n_cells_lstm 12,14 long run
+dir_data='20200319_171942' # n_cells_lstm 12,14 long run
+#dir_data='20200319_172028' # n_cells_lstm 12,14 long run
 
 #list_dir_data=['20200218_212228','20200303_183303']
-list_dir_data=['20200316_231639','20200316_231745','20200316_231815']
+list_dir_data=['20200319_005003','20200319_005038','20200319_005114']
 
 
 ######################################################################
