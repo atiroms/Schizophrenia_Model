@@ -43,7 +43,7 @@ for i in range(len(list_path_data)):
 #dir_data='20200319_171859' # n_cells_lstm 12,14 long run
 #dir_data='20200319_171942' # n_cells_lstm 12,14 long run
 #dir_data='20200319_172028' # n_cells_lstm 12,14 long run
-dir_data='20200320_213734'
+dir_data='20200321_145727'
 
 #list_dir_data=['20200218_212228','20200303_183303']
 list_dir_data=['20200319_005003','20200319_005038','20200319_005114']
@@ -133,7 +133,7 @@ class BatchAnalysis():
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_reward.png'))
         plt.show()
 
-    def batch_load(self,key='reward',len_precalc=5000):
+    def batch_load(self,key='reward',len_precalc=5000,list_key_batch=None):
         # Read batch_table
         with pd.HDFStore(os.path.join(self.path_load_batch,'batch_table.h5')) as hdf:
             df_batch = pd.DataFrame(hdf['batch_table'])
@@ -147,30 +147,41 @@ class BatchAnalysis():
                 df_batch_subset=df_batch.loc[df_batch[key_subset]==self.subset[key_subset]]
         else:
             df_batch_subset=df_batch
-        column_batchlabel=df_batch_subset.columns.tolist()
-        for column in ['datetime_start','run','done']:
-            if column in column_batchlabel:
-                column_batchlabel.remove(column)
 
         self.n_batch=len(df_batch_subset)
 
+        # Automatically create list of batch keys if not explicitly defined
+        if list_key_batch is None:
+            list_key_batch=df_batch_subset.columns.tolist()
+            for key_batch in ['datetime_start','run','done']:
+                if key_batch in list_key_batch:
+                    list_key_batch.remove(key_batch)
+
+        # Add or replace df_batch_subset using values from parmeters.json
+        for idx_subdir in range(self.n_batch):
+            subdir=df_batch_subset.loc[idx_subdir,'datetime_start']
+            with open(os.path.join(self.path_load_batch,subdir,'parameters.json')) as f:
+                dict_param=json.load(f)
+            for key_batch in list_key_batch:
+                df_batch_subset.loc[idx_subdir,key_batch]=dict_param[key_batch]
+
         # Create batch label and title for later plotting
-        label_batch=None
-        for column in column_batchlabel:
-            if type(df_batch_subset[column].tolist()[0])==str:
-                label_batch_column=df_batch_subset[column].tolist()
+        title_batch=None
+        for key_batch in list_key_batch:
+            if type(df_batch_subset[key_batch].tolist()[0])==str:
+                label_batch_key=df_batch_subset[key_batch].tolist()
             else:
-                if max(df_batch_subset[column].tolist())>1:
+                if max(df_batch_subset[key_batch].tolist())>1:
                     regex='{0:.0f}'
                 else:
                     regex='{:.4f}'
-                label_batch_column=[regex.format(b) for b in df_batch_subset[column].tolist()]
-            if label_batch is None:
-                label_batch=label_batch_column
-                title_batch=column
+                label_batch_key=[regex.format(b) for b in df_batch_subset[key_batch].tolist()]
+            if title_batch is None:
+                label_batch=label_batch_key
+                title_batch=key_batch
             else:
-                label_batch=[a+'_'+b for a,b in zip(label_batch,label_batch_column)]
-                title_batch=title_batch+'_'+column
+                label_batch=[a+':'+b for a,b in zip(label_batch,label_batch_key)]
+                title_batch=title_batch+':'+key_batch
         self.label_batch=label_batch
         self.title_batch=title_batch
 
@@ -190,7 +201,7 @@ class BatchAnalysis():
             # When the data is from pre-learned model, concatenate the last specified episodes before the data
             with open(os.path.join(path,'parameters.json')) as f:
                 dict_param=json.load(f)
-            if dict_param.load_model:    
+            if dict_param['load_model']:    
             #if 'dir_load' in dict_param.keys():
                 dir_load=dict_param['dir_load']
                 path_precalc=os.path.join(self.path_data,dir_load)
@@ -351,7 +362,7 @@ class BatchAnalysis():
         df_plot.columns=df_reward['episode_start'].tolist()
         df_plot.index=self.label_batch
         self.df_plot=df_plot
-        fig=plt.figure(figsize=(6,0.75+0.13*len(df_plot)),dpi=100)
+        fig=plt.figure(figsize=(6,0.90+0.125*len(df_plot)),dpi=100)
         ax=fig.add_subplot(1,1,1)
         #heatmap=ax.pcolor(df_reward['episode_start'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow)
         heatmap=ax.pcolor(df_reward['episode'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow_r)
@@ -443,8 +454,9 @@ class BatchAnalysis():
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_count.png'))
         plt.show()
 
-    def pipe_state(self,window=1000,padding=10,learned=True,threshold=[65,67.5],select_col=[0,1,3,10,17]):
-        df_batchreward=self.batch_load()
+    def pipe_state(self,window=1000,padding=10,learned=True,threshold=[65,67.5],
+                   select_col=None,list_key_batch=['learning_rate','n_cells_lstm']):
+        df_batchreward=self.batch_load(list_key_batch=list_key_batch)
         df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
         data_state=self.state_reward(df_batchrewardave,learned=learned,threshold=threshold)
         self.heatmap_reward(df_batchrewardave)
