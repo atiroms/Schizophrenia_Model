@@ -25,6 +25,7 @@
 #dir_data='20200314_202346' # n_cells_lstm 24, long run (200000, stable)
 
 #dir_data='20200319_170330' # n_cells_lstm 12,14,..24 long run
+#dir_data='20200321_184631' # n_cells_lstm 12,14,..24 long run
 #dir_data='20200319_171859' # n_cells_lstm 12,14 long run good
 #dir_data='20200319_171942' # n_cells_lstm 12,14 long run bad
 #dir_data='20200319_172028' # n_cells_lstm 12,14 long run bad
