@@ -40,10 +40,7 @@ for i in range(len(list_path_data)):
     elif i==len(list_path_data)-1:
         raise ValueError('Data folder does not exist in the list.')
 
-#dir_data='20200319_171859' # n_cells_lstm 12,14 long run
-#dir_data='20200319_171942' # n_cells_lstm 12,14 long run
-#dir_data='20200319_172028' # n_cells_lstm 12,14 long run
-dir_data='20200321_184631'
+dir_data='20200321_014712'
 
 #list_dir_data=['20200218_212228','20200303_183303']
 list_dir_data=['20200321_014554','20200321_014642','20200321_014712']
@@ -112,6 +109,12 @@ class BatchAnalysis():
             os.makedirs(self.path_save_analysis)
         self.subset=subset
 
+    def examine_batch(self,path_data=path_data,dir_data=dir_data):
+        # Read batch_table
+        with pd.HDFStore(os.path.join(self.path_load_batch,'batch_table.h5')) as hdf:
+            df_batch = pd.DataFrame(hdf['batch_table'])
+        print(df_batch)
+
     def single_plot(self,key='reward',window=1000,padding=10):
         with pd.HDFStore(self.path_load_batch+'/summary/summary.h5') as hdf:
             summary = pd.DataFrame(hdf['summary'])
@@ -137,7 +140,7 @@ class BatchAnalysis():
         # Read batch_table
         with pd.HDFStore(os.path.join(self.path_load_batch,'batch_table.h5')) as hdf:
             df_batch = pd.DataFrame(hdf['batch_table'])
-        #df_batch = df_batch.iloc[0:10,:]
+        
         df_batch=df_batch.loc[df_batch['done']==True,:]
         self.df_batch=df_batch
 

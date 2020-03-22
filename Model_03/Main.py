@@ -38,10 +38,8 @@ param_batch=[
 
     #{'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':2,'max':48}
     #{'name': 'n_cells_lstm', 'n':12, 'type':'parametric','method':'grid','min':2,'max':24}
-    #{'name': 'n_cells_lstm', 'n':3, 'type':'parametric','method':'grid','min':12,'max':16}
-    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':18,'max':20}
-    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':22,'max':24}
-    {'name': 'n_cells_lstm', 'n':3, 'type':'parametric','method':'grid','min':16,'max':20}
+    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':16,'max':22}
+    {'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':22,'max':24}
 
     #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
