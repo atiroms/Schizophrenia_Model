@@ -42,8 +42,11 @@ for i in range(len(list_path_data)):
 
 dir_data='20200321_014712'
 
-#list_dir_data=['20200218_212228','20200303_183303']
-list_dir_data=['20200321_014554','20200321_014642','20200321_014712']
+#list_dir_batch=['20200218_212228','20200303_183303']
+list_dir_batch=['20200321_014554','20200321_014642','20200321_014712']
+
+list_dir_run=['20200319_171859/20200319_171859',
+              '20200321_145727/20200321_150322']
 
 
 ######################################################################
@@ -59,16 +62,74 @@ from time import sleep
 import datetime
 import scipy.stats as stats
 import json
+import shutil
+
+def _copyfileobj_patched(fsrc, fdst, length=1024*1024*1024):
+    """Patches shutil method to hugely improve copy speed"""
+    while 1:
+        buf = fsrc.read(length)
+        if not buf:
+            break
+        fdst.write(buf)
+shutil.copyfileobj = _copyfileobj_patched
 
 
 ######################################################################
 # Combine multiple batches ###########################################
 ######################################################################
-class BatchCombine():
-    def __init__(self, path_data=path_data,list_dir_data=list_dir_data):
+class Combine():
+    def __init__(self, path_data=path_data):
         self.path_data=path_data
+
+    def run(self,list_dir_run=list_dir_run,copy_dir=True):
+        df_batch=pd.DataFrame()
+        for dir_data in list_dir_run:
+            path_load_batch=os.path.join(self.path_data,dir_data[:15])
+            if os.path.exists(path_load_batch):
+                # Read batch_table
+                with pd.HDFStore(os.path.join(path_load_batch,'batch_table.h5')) as hdf:
+                    df_batch_append = pd.DataFrame(hdf['batch_table'])
+                if dir_data[16:] in df_batch_append['datetime_start'].tolist():
+                    df_batch_append=df_batch_append.loc[df_batch_append['datetime_start']==dir_data[16:],]
+                    df_batch=df_batch.append(df_batch_append)
+                else:
+                    print("Simulation directory not in batch_table: "+dir_data[16:]+'.')
+            else:
+                print("Batch dir does not exist: "+dir_data+".")
+        
+        df_batch=df_batch.reset_index(drop=True)
+        self.df_batch=df_batch.drop('run',axis=1)
+        print('Detected '+str(len(self.df_batch))+'/'+str(len(list_dir_run))+' runs.')
+        print(self.df_batch)
+        
+        # Timestamping directory name
+        datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
+        path_save_batch=os.path.join(self.path_data,datetime_start)
+        if not os.path.exists(path_save_batch):
+            os.makedirs(path_save_batch)
+        hdf=pd.HDFStore(path_save_batch+'/batch_table.h5')
+        hdf.put('batch_table',self.df_batch,format='table',append=False,data_columns=True)
+        hdf.close()
+        print('Saved new batch table.')
+        list_dir_manualcopy=[]
+        for dir_data in list_dir_run:
+            if dir_data[16:] in self.df_batch['datetime_start'].tolist():
+                if copy_dir:
+                    path_src_run=os.path.join(self.path_data,dir_data)
+                    path_dst_run=os.path.join(self.path_data,datetime_start,dir_data[16:])
+                    print('Copying '+dir_data)
+                    shutil.copytree(path_src_run,path_dst_run)
+                else:
+                    list_dir_manualcopy.append(dir_data)
+        if not copy_dir:
+            print('Please copy subdirectories manually:')
+            print(list_dir_manualcopy)
+            
+        print('Done run().')
+
+    def batch(self,list_dir_batch=list_dir_batch):
         self.df_batch=pd.DataFrame()
-        for dir_data in list_dir_data:
+        for dir_data in list_dir_batch:
             path_load_batch=os.path.join(path_data,dir_data)
             if os.path.exists(path_load_batch):
                 # Read batch_table
@@ -83,7 +144,6 @@ class BatchCombine():
         self.df_batch=self.df_batch.drop('run',axis=1)
         print('Detected '+str(len(self.df_batch))+' runs.')
 
-    def combine(self):
         # Timestamping directory name
         datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
         self.path_save_batch=os.path.join(self.path_data,datetime_start)
@@ -93,7 +153,8 @@ class BatchCombine():
         hdf.put('batch_table',self.df_batch,format='table',append=False,data_columns=True)
         hdf.close()
         print('Saved new batch table.')
-        print('Please copy subdirectories manually.')
+        print('Please copy subdirectories manually:')
+        print(list_dir_batch)
 
 
 ######################################################################
