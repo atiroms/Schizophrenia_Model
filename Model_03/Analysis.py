@@ -40,7 +40,7 @@ for i in range(len(list_path_data)):
     elif i==len(list_path_data)-1:
         raise ValueError('Data folder does not exist in the list.')
 
-dir_data='20200321_014712'
+dir_data='20200229_214730' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
 
 #list_dir_batch=['20200218_212228','20200303_183303']
 list_dir_batch=['20200321_014554','20200321_014642','20200321_014712']
@@ -246,6 +246,7 @@ class BatchAnalysis():
             else:
                 label_batch=[a+':'+b for a,b in zip(label_batch,label_batch_key)]
                 title_batch=title_batch+':'+key_batch
+        self.list_key_batch=list_key_batch
         self.label_batch=label_batch
         self.title_batch=title_batch
 
