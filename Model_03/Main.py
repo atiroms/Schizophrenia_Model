@@ -19,8 +19,8 @@ For batch simulations,
 #set_param_sim='param_sim.json'
 #set_param_sim='param_sim_gpu.json'
 #set_param_sim='param_sim_pic.json'
-#set_param_sim='param_sim_long.json'
-set_param_sim='param_test.json'
+set_param_sim='param_sim_long.json'
+#set_param_sim='param_test.json'
 
 set_param_mod='param_wang2018.json'
 #set_param_mod='param_wang2018_small.json'
@@ -38,8 +38,8 @@ param_batch=[
 
     #{'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':2,'max':48}
     #{'name': 'n_cells_lstm', 'n':12, 'type':'parametric','method':'grid','min':2,'max':24}
-    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':16,'max':22}
-    {'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':22,'max':24}
+    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':14,'max':18}
+    {'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':14,'max':24}
 
     #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
