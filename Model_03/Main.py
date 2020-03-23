@@ -19,8 +19,8 @@ For batch simulations,
 #set_param_sim='param_sim.json'
 #set_param_sim='param_sim_gpu.json'
 #set_param_sim='param_sim_pic.json'
-set_param_sim='param_sim_long.json'
-#set_param_sim='param_test.json'
+#set_param_sim='param_sim_long.json'
+set_param_sim='param_test.json'
 
 set_param_mod='param_wang2018.json'
 #set_param_mod='param_wang2018_small.json'
