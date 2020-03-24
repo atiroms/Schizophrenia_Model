@@ -40,18 +40,18 @@ for i in range(len(list_path_data)):
     elif i==len(list_path_data)-1:
         raise ValueError('Data folder does not exist in the list.')
 
-dir_data='20200323_110251'
+dir_data='20200324_184156' # n_cells_lstm 12,14,..24 long stable runs (25 in total)
 
 #list_dir_batch=['20200218_212228','20200303_183303']
 list_dir_batch=['20200321_014554','20200321_014642','20200321_014712']
 
-list_dir_run=['20200319_171859/20200319_171859','20200319_171942/20200319_171942','20200319_172028/20200319_172028',
-              '20200319_171859/20200319_225701','20200319_171942/20200319_225727',
-              '20200321_205833/20200321_205833','20200322_160733/20200322_160733','20200322_160820/20200322_160820',
-              '20200319_170330/20200319_005039','20200321_184631/20200321_014642','20200321_205731/20200322_024611',
-              '20200319_170330/20200319_061946','20200321_205704/20200322_081548','20200321_205731/20200322_082151',
-              '20200322_160733/20200322_225437','20200322_160859/20200322_160900','20200322_160932/20200322_160932',
-              '20200319_170330/20200319_061919','20200322_160932/20200322_230520']
+list_dir_run=['20200319_171859/20200319_171859','20200319_172028/20200319_172028','20200319_171942/20200319_171942',
+              '20200323_112746/20200323_112746','20200323_113008/20200323_113008','20200323_112916/20200323_112916','20200319_171942/20200319_225727','20200319_171859/20200319_225701',
+              '20200322_160820/20200322_160820','20200322_160733/20200322_160733','20200321_205833/20200321_205833',
+              '20200321_205731/20200322_024611','20200319_170330/20200319_005039','20200321_184631/20200321_014642','20200323_112746/20200323_180328',
+              '20200321_205704/20200322_081548','20200321_205731/20200322_082151','20200319_170330/20200319_061946',
+              '20200322_160859/20200322_160900','20200322_160733/20200322_225437','20200322_160932/20200322_160932',
+              '20200322_160932/20200322_230520','20200319_170330/20200319_061919','20200323_113008/20200323_180533','20200323_112916/20200323_180413']
 
 
 ######################################################################
@@ -467,7 +467,7 @@ class BatchAnalysis():
         ax.set_xlabel("Task episode")
         ax.set_ylabel("Reward")
         ax.legend(title=self.title_batch,labels=[self.label_batch[i] for i in select_col],
-                  bbox_to_anchor=(1.05,1),loc='upper left')
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=6)
         #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
@@ -486,7 +486,7 @@ class BatchAnalysis():
         ax.set_xlabel("Task episode")
         ax.set_ylabel("State")
         ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=4)
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=6)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_state.png'))
@@ -502,7 +502,7 @@ class BatchAnalysis():
         ax.set_xlabel("Task episode")
         ax.set_ylabel("Count of psychotic episodes")
         ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=4)
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=6)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_cumul.png'))
@@ -518,7 +518,7 @@ class BatchAnalysis():
         ax.set_xlabel("Task episode")
         ax.set_ylabel("Duration x Severity")
         ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=4)
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=6)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_count.png'))
