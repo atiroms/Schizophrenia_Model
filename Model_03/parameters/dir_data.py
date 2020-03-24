@@ -31,6 +31,8 @@
 #dir_data='20200319_172028' # n_cells_lstm 12,14 long run
 #dir_data='' # n_cells_lstm 14,18 long run
 #dir_data='' # n_cells_lstm 14,18 long run
+#dir_data='' # n_cells_lstm 14,24 long run
+#dir_data='' # n_cells_lstm 14,24 long run
 #dir_data='20200321_205704' # n_cells_lstm 16,18,20 long run
 #dir_data='20200321_205731' # n_cells_lstm 16,18,20 long run
 #dir_data='20200321_205833' # n_cells_lstm 16,18,20 long run 
