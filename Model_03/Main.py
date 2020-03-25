@@ -16,18 +16,20 @@ For batch simulations,
 # Parameters #########################################################
 ######################################################################
 
-#set_param_sim='param_sim.json'
+set_param_sim='param_sim.json'
 #set_param_sim='param_sim_gpu.json'
 #set_param_sim='param_sim_pic.json'
-set_param_sim='param_sim_long.json'
+#set_param_sim='param_sim_long.json'
 #set_param_sim='param_test.json'
 
 set_param_mod='param_wang2018.json'
 #set_param_mod='param_wang2018_small.json'
 #set_param_mod='param_wang2018_parallel.json'
 
-#batch_restart='20200311_235702'
-batch_restart=None
+#batch_restart='20200324_200640'
+#batch_restart='20200324_200744'
+batch_restart='20200324_200829'
+#batch_restart=None
 
 #dir_load='20200222_002120/20200222_122717'
 #dir_load='20200314_202346'
@@ -38,17 +40,22 @@ param_batch=[
 
     #{'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':2,'max':48}
     #{'name': 'n_cells_lstm', 'n':12, 'type':'parametric','method':'grid','min':2,'max':24}
-    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':14,'max':18}
-    {'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':14,'max':24}
 
     #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
     #{'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
 
-    #{'name': 'learning_rate', 'n':2, 'type':'parametric','method':'grid','min':0.0007,'max':0.0070},
-    #{'name': 'learning_rate', 'n':14, 'type':'parametric','method':'grid','min':0.0007,'max':0.0020},
+    #{'name': 'learning_rate', 'n':5, 'type':'parametric','method':'grid','min':0.0007,'max':0.0011},
+    #{'name': 'learning_rate', 'n':5, 'type':'parametric','method':'grid','min':0.0012,'max':0.0016},
+    {'name': 'learning_rate', 'n':4, 'type':'parametric','method':'grid','min':0.0017,'max':0.0020},
 
-    #{'name':'dir_load', 'n':2, 'type':'list','list':['20200319_171859/20200319_171859','20200319_171859/20200319_225701']}
+    {'name':'dir_load', 'n':7, 'type':'list','list':['20200319_171859/20200319_171859',
+                                                     '20200323_112746/20200323_112746',
+                                                     '20200322_160820/20200322_160820',
+                                                     '20200321_205731/20200322_024611',
+                                                     '20200321_205704/20200322_081548',
+                                                     '20200322_160859/20200322_160900',
+                                                     '20200322_160932/20200322_230520']}
 
     #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
     #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
