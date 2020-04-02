@@ -39,11 +39,11 @@ class A2C_Agent():
         #self.summary_writer = tf.summary.FileWriter(self.param.path_save+"/summary/"+self.name)
 
         # Create the local copy of the network and the tensorflow op to copy master paramters to local network
-        self.local_AC = Network.LSTM_RNN_Network(self.param,self.n_actions,self.name,trainer)
+        self.local_AC = Network.LSTM_RNN(self.param,self.n_actions,self.name,trainer)
         #self.update_local_ops = update_target_graph('master',self.name)
         
-        from_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'master')
-        to_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, self.name)
+        from_vars = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, 'master')
+        to_vars = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, self.name)
         self.ops_copy_graph = []
         for from_var,to_var in zip(from_vars,to_vars):
             self.ops_copy_graph.append(to_var.assign(from_var))
@@ -53,8 +53,8 @@ class A2C_Agent():
     # Used to set worker network parameters to those of global network.
     '''
     def update_target_graph(self,from_scope,to_scope):
-        from_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, from_scope)
-        to_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, to_scope)
+        from_vars = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, from_scope)
+        to_vars = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, to_scope)
 
         op_holder = []
         for from_var,to_var in zip(from_vars,to_vars):
@@ -227,7 +227,7 @@ class A2C_Agent():
                 # Save model trainable variables in dataframe
                 if self.param.interval_var>0:
                     if cnt_episode_global % self.param.interval_var == 0 and self.param.train == True:
-                        vars_master = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'master')
+                        vars_master = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, 'master')
                         val = sess.run(vars_master)                      
                         df_var_episode=np.empty(shape=[0,])
                         for v in val:

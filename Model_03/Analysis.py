@@ -22,6 +22,7 @@ summary/summary.h5:
     total reward, task arm probabilities, learning losses, etc...
 '''
 
+
 ######################################################################
 # Parameters #########################################################
 ######################################################################
@@ -40,55 +41,25 @@ for i in range(len(list_path_data)):
     elif i==len(list_path_data)-1:
         raise ValueError('Data folder does not exist in the list.')
 
-#dir_data='20200216_191229'
-#dir_data='20200216_204436'
-#dir_data='20200216_233234' # n_cells_lstm 4, 15, ... 48
-#dir_data='20200217_103834'
+dir_data='20200330_123957' # learning_rate 0.007-0.020 after n_cells_lstm 12-24 long run
 
-#dir_data='20200219_223846' # learning_rate 0.0001, 0.0002, ... 0.0019
-#dir_data='20200220_230830' # learning_rate 0.0020, 0.0025, ... 0.0100
-#dir_data='20200222_002120' # three long runs (200000)
-#dir_data='20200223_153711' # combined '20200219_223846' and '20200220_230830'
-#dir_data='20200222_233321' # learning_rate 0.0001, 0.0002, ... 0.0019 after loading '20200222_002120/20200222_122717'
-#dir_data='20200223_235457' # learning_rate 0.0020, 0.0025, ... 0.0100 after loading '20200222_002120/20200222_122717'
-#dir_data='20200224_220741' # combined '20200222_233321' and '20200223_235457'
-#dir_data='20200224_234232' # learning_rate 0.0150, 0.0200, ... 0.1000 after loading '20200222_002120/20200222_122717'
-#dir_data='20200226_153138' # n_cells_lstm 36,48,60 after loading '20200222_002120/20200222_122717'
-#dir_data='20200226_200910' # n_cells_lstm 12,16,...60 after loading '20200222_002120/20200222_122717'
-#dir_data='20200227_123416' # n_cells_lstm 4,8 after loading '20200222_002120/20200222_122717'
-#dir_data='20200227_150929' # combined '20200227_123416' and '20200226_200910' (n_cells_lstm 4-60)
-#dir_data='20200227_160031' # n_cells_lstm 1,2,..11 after loading '20200222_002120/20200222_122717'
-#dir_data='20200228_123122' # combined '20200227_160031' and '20200226_200910' (n_cells_lstm 1-60)
-#dir_data='20200228_130159' # n_cells_lstm 13,14,..36 after loading '20200222_002120/20200222_122717'
-#dir_data='20200229_210037' # combined '20200227_160031' and '20200228_130159' n_cells_lstm 1,2,..36 after loading '20200222_002120/20200222_122717'
-#dir_data='20200302_062250'  # learning_rate 0.0150, 0.0200, ... 0.1000
-#dir_data='20200218_212228' # n_cells_lstm 5, 10, ... 100
-#dir_data='20200303_183303' # n_cells_lstm 110,120, ... 200
+#list_dir_batch=['20200218_212228','20200303_183303']
+#list_dir_batch=['20200321_014554','20200321_014642','20200321_014712']
+#list_dir_batch=['20200324_200640','20200324_200744','20200324_200829']
+list_dir_batch=['20200327_143522','20200327_143603','20200327_143641']
 
-# Loding from pre-calculated data
-dir_data='20200229_214730' # n_cells_lstm 2,4,..48 random deletion after loading '20200222_002120/20200222_122717'
-#dir_data='20200227_151151' # learning_rate 0.0001-0.1000 after loading (combined '20200222_233321', '20200223_235457' and '20200224_234232')
-
-# Raw simulation
-dir_data='20200304_080520' # n_cells_lstm 5-200 (combined '20200218_212228' and '20200303_183303')
-#dir_data='20200303_174857' # learning_rate 0.0001-0.1000 (combined '20200219_223846', '20200220_230830' and '')
-
-#dir_data='20200229_003524' # single run
-#dir_data='20200229_214730/20200301_012501' # n_cells_lstm=8
-
-#list_dir_data=['20200219_223846','20200220_230830']
-#list_dir_data=['20200222_233321','20200223_235457','20200224_234232']
-#list_dir_data=['20200227_123416','20200226_200910']
-#list_dir_data=['20200227_160031','20200226_200910']
-#list_dir_data=['20200227_160031','20200228_130159']
-#list_dir_data=['20200219_223846','20200220_230830','20200302_062250']
-list_dir_data=['20200218_212228','20200303_183303']
+list_dir_run=['20200319_171859/20200319_171859','20200319_172028/20200319_172028','20200319_171942/20200319_171942',
+              '20200323_112746/20200323_112746','20200323_113008/20200323_113008','20200323_112916/20200323_112916','20200319_171942/20200319_225727','20200319_171859/20200319_225701',
+              '20200322_160820/20200322_160820','20200322_160733/20200322_160733','20200321_205833/20200321_205833',
+              '20200321_205731/20200322_024611','20200319_170330/20200319_005039','20200321_184631/20200321_014642','20200323_112746/20200323_180328',
+              '20200321_205704/20200322_081548','20200321_205731/20200322_082151','20200319_170330/20200319_061946',
+              '20200322_160859/20200322_160900','20200322_160733/20200322_225437','20200322_160932/20200322_160932',
+              '20200322_160932/20200322_230520','20200319_170330/20200319_061919','20200323_113008/20200323_180533','20200323_112916/20200323_180413']
 
 
 ######################################################################
 # Libraries ##########################################################
 ######################################################################
-
 import numpy as np
 import pandas as pd
 import math
@@ -98,20 +69,75 @@ from tqdm import tqdm
 from time import sleep
 import datetime
 import scipy.stats as stats
-#import tensorflow as tf
-#import plotly as py
-#import cufflinks as cf
-#import glob
+import json
+import shutil
+
+def _copyfileobj_patched(fsrc, fdst, length=1024*1024*1024):
+    """Patches shutil method to hugely improve copy speed"""
+    while 1:
+        buf = fsrc.read(length)
+        if not buf:
+            break
+        fdst.write(buf)
+shutil.copyfileobj = _copyfileobj_patched
 
 
 ######################################################################
 # Combine multiple batches ###########################################
 ######################################################################
-class BatchCombine():
-    def __init__(self, path_data=path_data,list_dir_data=list_dir_data):
+class Combine():
+    def __init__(self, path_data=path_data):
         self.path_data=path_data
+
+    def run(self,list_dir_run=list_dir_run,copy_dir=True):
+        df_batch=pd.DataFrame()
+        for dir_data in list_dir_run:
+            path_load_batch=os.path.join(self.path_data,dir_data[:15])
+            if os.path.exists(path_load_batch):
+                # Read batch_table
+                with pd.HDFStore(os.path.join(path_load_batch,'batch_table.h5')) as hdf:
+                    df_batch_append = pd.DataFrame(hdf['batch_table'])
+                if dir_data[16:] in df_batch_append['datetime_start'].tolist():
+                    df_batch_append=df_batch_append.loc[df_batch_append['datetime_start']==dir_data[16:],]
+                    df_batch=df_batch.append(df_batch_append)
+                else:
+                    print("Simulation directory not in batch_table: "+dir_data[16:]+'.')
+            else:
+                print("Batch dir does not exist: "+dir_data+".")
+        
+        df_batch=df_batch.reset_index(drop=True)
+        self.df_batch=df_batch.drop('run',axis=1)
+        print('Detected '+str(len(self.df_batch))+'/'+str(len(list_dir_run))+' runs.')
+        print(self.df_batch)
+        
+        # Timestamping directory name
+        datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
+        path_save_batch=os.path.join(self.path_data,datetime_start)
+        if not os.path.exists(path_save_batch):
+            os.makedirs(path_save_batch)
+        hdf=pd.HDFStore(path_save_batch+'/batch_table.h5')
+        hdf.put('batch_table',self.df_batch,format='table',append=False,data_columns=True)
+        hdf.close()
+        print('Saved new batch table.')
+        list_dir_manualcopy=[]
+        for dir_data in list_dir_run:
+            if dir_data[16:] in self.df_batch['datetime_start'].tolist():
+                if copy_dir:
+                    path_src_run=os.path.join(self.path_data,dir_data)
+                    path_dst_run=os.path.join(self.path_data,datetime_start,dir_data[16:])
+                    print('Copying '+dir_data)
+                    shutil.copytree(path_src_run,path_dst_run)
+                else:
+                    list_dir_manualcopy.append(dir_data)
+        if not copy_dir:
+            print('Please copy subdirectories manually:')
+            print(list_dir_manualcopy)
+            
+        print('Done run().')
+
+    def batch(self,list_dir_batch=list_dir_batch):
         self.df_batch=pd.DataFrame()
-        for dir_data in list_dir_data:
+        for dir_data in list_dir_batch:
             path_load_batch=os.path.join(path_data,dir_data)
             if os.path.exists(path_load_batch):
                 # Read batch_table
@@ -126,7 +152,6 @@ class BatchCombine():
         self.df_batch=self.df_batch.drop('run',axis=1)
         print('Detected '+str(len(self.df_batch))+' runs.')
 
-    def combine(self):
         # Timestamping directory name
         datetime_start="{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())
         self.path_save_batch=os.path.join(self.path_data,datetime_start)
@@ -136,7 +161,8 @@ class BatchCombine():
         hdf.put('batch_table',self.df_batch,format='table',append=False,data_columns=True)
         hdf.close()
         print('Saved new batch table.')
-        print('Please copy subdirectories manually.')
+        print('Please copy subdirectories manually:')
+        print(list_dir_batch)
 
 
 ######################################################################
@@ -145,11 +171,18 @@ class BatchCombine():
 
 class BatchAnalysis():
     def __init__(self, path_data=path_data,dir_data=dir_data,subset={}):
+        self.path_data=path_data
         self.path_load_batch=os.path.join(path_data,dir_data)
         self.path_save_analysis=os.path.join(self.path_load_batch,"analysis")
         if not os.path.exists(self.path_save_analysis):
             os.makedirs(self.path_save_analysis)
         self.subset=subset
+
+    def examine_batch(self,path_data=path_data,dir_data=dir_data):
+        # Read batch_table
+        with pd.HDFStore(os.path.join(self.path_load_batch,'batch_table.h5')) as hdf:
+            df_batch = pd.DataFrame(hdf['batch_table'])
+        print(df_batch)
 
     def single_plot(self,key='reward',window=1000,padding=10):
         with pd.HDFStore(self.path_load_batch+'/summary/summary.h5') as hdf:
@@ -172,11 +205,11 @@ class BatchAnalysis():
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_reward.png'))
         plt.show()
 
-    def batch_load(self,key='reward'):
+    def batch_load(self,key='reward',len_precalc=5000,list_key_batch=None):
         # Read batch_table
         with pd.HDFStore(os.path.join(self.path_load_batch,'batch_table.h5')) as hdf:
             df_batch = pd.DataFrame(hdf['batch_table'])
-        #df_batch = df_batch.iloc[0:10,:]
+        
         df_batch=df_batch.loc[df_batch['done']==True,:]
         self.df_batch=df_batch
 
@@ -186,24 +219,42 @@ class BatchAnalysis():
                 df_batch_subset=df_batch.loc[df_batch[key_subset]==self.subset[key_subset]]
         else:
             df_batch_subset=df_batch
-        column_batchlabel=df_batch_subset.columns.tolist()
-        for column in ['datetime_start','run','done']:
-            if column in column_batchlabel:
-                column_batchlabel.remove(column)
 
         self.n_batch=len(df_batch_subset)
-        label_batch=None
-        for column in column_batchlabel:
-            if max(df_batch_subset[column].tolist())>1:
-                regex='{0:.0f}'
+
+        # Automatically create list of batch keys if not explicitly defined
+        if list_key_batch is None:
+            list_key_batch=df_batch_subset.columns.tolist()
+            for key_batch in ['datetime_start','run','done']:
+                if key_batch in list_key_batch:
+                    list_key_batch.remove(key_batch)
+
+        # Add or replace df_batch_subset using values from parmeters.json
+        for idx_subdir in range(self.n_batch):
+            subdir=df_batch_subset.loc[idx_subdir,'datetime_start']
+            with open(os.path.join(self.path_load_batch,subdir,'parameters.json')) as f:
+                dict_param=json.load(f)
+            for key_batch in list_key_batch:
+                df_batch_subset.loc[idx_subdir,key_batch]=dict_param[key_batch]
+
+        # Create batch label and title for later plotting
+        title_batch=None
+        for key_batch in list_key_batch:
+            if type(df_batch_subset[key_batch].tolist()[0])==str:
+                label_batch_key=df_batch_subset[key_batch].tolist()
             else:
-                regex='{:.4f}'
-            if label_batch is None:
-                label_batch=[regex.format(b) for b in df_batch_subset[column].tolist()]
-                title_batch=column
+                if max(df_batch_subset[key_batch].tolist())>1:
+                    regex='{0:.0f}'
+                else:
+                    regex='{:.4f}'
+                label_batch_key=[regex.format(b) for b in df_batch_subset[key_batch].tolist()]
+            if title_batch is None:
+                label_batch=label_batch_key
+                title_batch=key_batch
             else:
-                label_batch=[a+'_'+regex.format(b) for a,b in zip(label_batch,df_batch_subset[column].tolist())]
-                title_batch=title_batch+'_'+column
+                label_batch=[a+':'+b for a,b in zip(label_batch,label_batch_key)]
+                title_batch=title_batch+':'+key_batch
+        self.list_key_batch=list_key_batch
         self.label_batch=label_batch
         self.title_batch=title_batch
 
@@ -214,15 +265,34 @@ class BatchAnalysis():
             #print('\rLoading ' + str(i+1) + '/' + str(self.n_batch) + '                 ',end='')
             subdir=df_batch_subset['datetime_start'].iloc[i]
             path=self.path_load_batch + '/' + subdir
+
+            # Load summary data
             with pd.HDFStore(path+'/summary/summary.h5') as hdf:
                 summary = pd.DataFrame(hdf['summary'])
-            
             summary=summary[['episode',key]].rename(columns={key:str(i)})
+
+            # When the data is from pre-learned model, concatenate the last specified episodes before the data
+            with open(os.path.join(path,'parameters.json')) as f:
+                dict_param=json.load(f)
+            if dict_param['load_model']:    
+            #if 'dir_load' in dict_param.keys():
+                dir_load=dict_param['dir_load']
+                path_precalc=os.path.join(self.path_data,dir_load)
+                with pd.HDFStore(path_precalc+'/summary/summary.h5') as hdf:
+                    summary_precalc = pd.DataFrame(hdf['summary'])
+                summary_precalc=summary_precalc[['episode',key]].rename(columns={key:str(i)})
+                summary_precalc=summary_precalc.iloc[-len_precalc:,:]
+                diff_precalc=max(summary_precalc['episode'])+1
+                summary_precalc['episode']=summary_precalc['episode']-diff_precalc
+                summary=pd.concat([summary_precalc,summary])
+                summary=summary.reset_index(drop=True)
+
+            # Horizontally concatenate the loaded data
             if i == 0:
                 output=summary
             else:
                 output=pd.merge(output,summary,how='outer', on='episode')
-        output['episode']=output['episode']-output.loc[0,'episode']
+        #output['episode']=output['episode']-output.loc[0,'episode']
         print('Finished loading data.')
         #self.df_ave=MovAveEpisode(dataframe=self.summaries).output
         return(output)
@@ -365,7 +435,7 @@ class BatchAnalysis():
         df_plot.columns=df_reward['episode_start'].tolist()
         df_plot.index=self.label_batch
         self.df_plot=df_plot
-        fig=plt.figure(figsize=(6,0.75+0.13*len(df_plot)),dpi=100)
+        fig=plt.figure(figsize=(6,0.90+0.125*len(df_plot)),dpi=100)
         ax=fig.add_subplot(1,1,1)
         #heatmap=ax.pcolor(df_reward['episode_start'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow)
         heatmap=ax.pcolor(df_reward['episode'].tolist(),np.arange(self.n_batch+1),df_plot,cmap=cm.rainbow_r)
@@ -384,33 +454,24 @@ class BatchAnalysis():
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_heatmap.png'))
         plt.show()
 
-    def plot_reward(self,df_reward,select_col=[0,1,3,10,17]):
+    def plot_reward(self,df_reward,select_col=None):
         print('Preparing line plot.')
         #self.path=os.path.join(path_data,dir_data)
         #self.df_ave=df_ave
         fig=plt.figure(figsize=(6,5),dpi=100)
         ax=fig.add_subplot(1,1,1)
-        if select_col is not None:
-            for i in range(len(select_col)):
-                ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,select_col[i]],
-                        color=cm.rainbow(i/len(select_col)))
-            ax.invert_yaxis()
-            ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
-            ax.set_xlabel("Task episode")
-            ax.set_ylabel("Reward")
-            ax.legend(title=self.title_batch,labels=[self.label_batch[i] for i in select_col],
-                      bbox_to_anchor=(1.05,1),loc='upper left')
-            #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
-        else:
-            for i in range(self.n_batch):
-                ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,i],
-                        color=cm.rainbow(i/self.n_batch))
-            ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
-            ax.set_xlabel("Task episode")
-            ax.set_ylabel("Reward")
-            ax.legend(title=self.title_batch,labels=self.label_batch,
-                      bbox_to_anchor=(1.05,1),loc='upper left')
-            #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
+        if select_col is None:
+            select_col=[i for i in range(self.n_batch)]
+        for i in range(len(select_col)):
+            ax.plot(df_reward['episode'],df_reward.drop(['episode_start','episode_stop','episode'],axis=1).iloc[:,select_col[i]],
+                    color=cm.rainbow(i/len(select_col)))
+        ax.invert_yaxis()
+        ax.set_title("Average reward, window: "+str(self.win_ave)+", padding: "+str(self.pad_ave))
+        ax.set_xlabel("Task episode")
+        ax.set_ylabel("Reward")
+        ax.legend(title=self.title_batch,labels=[self.label_batch[i] for i in select_col],
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=6)
+        #ax.plot(np.arange(0,x_test.shape[0],1),y_test)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_reward.png'))
@@ -428,7 +489,7 @@ class BatchAnalysis():
         ax.set_xlabel("Task episode")
         ax.set_ylabel("State")
         ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=4)
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=6)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_state.png'))
@@ -444,7 +505,7 @@ class BatchAnalysis():
         ax.set_xlabel("Task episode")
         ax.set_ylabel("Count of psychotic episodes")
         ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=4)
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=6)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_cumul.png'))
@@ -460,31 +521,33 @@ class BatchAnalysis():
         ax.set_xlabel("Task episode")
         ax.set_ylabel("Duration x Severity")
         ax.legend(title=self.title_batch,labels=self.label_batch,
-                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=4)
+                  bbox_to_anchor=(1.05,1),loc='upper left',fontsize=6)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_save_analysis,
                                  "{0:%Y%m%d_%H%M%S}".format(datetime.datetime.now())+'_count.png'))
         plt.show()
 
-    def pipe_state(self,window=1000,padding=10,learned=True,threshold=[65,67.5]):
-        df_batchreward=self.batch_load()
+    def pipe_state(self,window=1000,padding=10,learned=True,threshold=[65,67.5],
+                   select_col=None,list_key_batch=['learning_rate','n_cells_lstm']):
+        df_batchreward=self.batch_load(list_key_batch=list_key_batch)
         df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
         data_state=self.state_reward(df_batchrewardave,learned=learned,threshold=threshold)
         self.heatmap_reward(df_batchrewardave)
+        self.plot_reward(df_batchrewardave,select_col=select_col)
         self.plot_state(data_state[0])
         self.plot_count(data_state[1])
         self.plot_cumulative(data_state[2])
         return(data_state)
         
-    def pipe_mov(self,window=1000,padding=10):
+    def pipe_mov(self,window=1000,padding=10,select_col=[0,1,3,10,17]):
         df_batchreward=self.batch_load()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window)
-        self.plot_reward(df_batchrewardave)
+        self.plot_reward(df_batchrewardave,select_col=select_col)
 
-    def pipe_block(self,window=100,padding=100):
+    def pipe_block(self,window=100,padding=100,select_col=[0,1,3,10,17]):
         df_batchreward=self.batch_load()
         df_batchrewardave=self.ave_reward(df_batchreward,window=window,padding=padding)
-        self.plot_reward(df_batchrewardave)
+        self.plot_reward(df_batchrewardave,select_col=select_col)
 
     def pipe_hm_mov(self,window=1000,padding=10):
         df_batchreward=self.batch_load()

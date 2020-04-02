@@ -17,41 +17,55 @@ For batch simulations,
 ######################################################################
 
 set_param_sim='param_sim.json'
+#set_param_sim='param_sim_gpu.json'
 #set_param_sim='param_sim_pic.json'
 #set_param_sim='param_sim_long.json'
 #set_param_sim='param_test.json'
 
 set_param_mod='param_wang2018.json'
+#set_param_mod='param_wang2018_small.json'
 #set_param_mod='param_wang2018_parallel.json'
 
-#dir_restart='20200219_223846'
-#dir_restart='20200221_234851'
-#dir_restart='20200222_002120'
-#dir_restart='20200222_233321'
-#dir_restart='20200224_234232'
-#dir_restart='20200226_161100'
-#dir_restart='20200228_130159'
-#dir_restart='20200229_214730'
-#dir_restart='20200302_062250'
-dir_restart=None
+#batch_restart='20200327_143522'
+#batch_restart='20200327_143603'
+batch_restart='20200327_143641'
+#batch_restart=None
 
 #dir_load='20200222_002120/20200222_122717'
+#dir_load='20200314_202346'
 dir_load=None
 
 param_batch=[
     #{'name':'dummy_counter', 'n':3, 'type':'parametric', 'method':'grid', 'min':0,'max':2}
-    #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
-    #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
-    #{'name': 'n_cells_lstm', 'n':20, 'type':'parametric','method':'grid','min':5,'max':100}
+
+    #{'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':2,'max':48}
+    #{'name': 'n_cells_lstm', 'n':12, 'type':'parametric','method':'grid','min':2,'max':24}
+
     #{'name': 'learning_rate', 'n':19, 'type':'parametric','method':'grid','min':0.0001,'max':0.0019},
     #{'name': 'learning_rate', 'n':17, 'type':'parametric','method':'grid','min':0.002,'max':0.01}
     #{'name': 'learning_rate', 'n':18, 'type':'parametric','method':'grid','min':0.015,'max':0.100}
-    #{'name': 'n_cells_lstm', 'n':3, 'type':'parametric','method':'grid','min':36,'max':60}
-    #{'name': 'n_cells_lstm', 'n':13, 'type':'parametric','method':'grid','min':12,'max':60}
-    #{'name': 'n_cells_lstm', 'n':2, 'type':'parametric','method':'grid','min':4,'max':8}
-    #{'name': 'n_cells_lstm', 'n':11, 'type':'parametric','method':'grid','min':1,'max':11}
-    #{'name': 'n_cells_lstm', 'n':24, 'type':'parametric','method':'grid','min':2,'max':48}
-    {'name': 'n_cells_lstm', 'n':10, 'type':'parametric','method':'grid','min':110,'max':200}
+
+    #{'name': 'learning_rate', 'n':5, 'type':'parametric','method':'grid','min':0.0007,'max':0.0011},
+    #{'name': 'learning_rate', 'n':5, 'type':'parametric','method':'grid','min':0.0012,'max':0.0016},
+    {'name': 'learning_rate', 'n':4, 'type':'parametric','method':'grid','min':0.0017,'max':0.0020},
+
+    #{'name':'dir_load', 'n':7, 'type':'list','list':['20200319_171859/20200319_171859',
+    #                                                 '20200323_112746/20200323_112746',
+    #                                                 '20200322_160820/20200322_160820',
+    #                                                 '20200321_205731/20200322_024611',
+    #                                                 '20200321_205704/20200322_081548',
+    #                                                 '20200322_160859/20200322_160900',
+    #                                                 '20200322_160932/20200322_230520']}
+    {'name':'dir_load', 'n':7, 'type':'list','list':['20200319_172028/20200319_172028',
+                                                     '20200323_113008/20200323_113008',
+                                                     '20200322_160733/20200322_160733',
+                                                     '20200319_170330/20200319_005039',
+                                                     '20200321_205731/20200322_082151',
+                                                     '20200322_160733/20200322_225437',
+                                                     '20200319_170330/20200319_061919']}
+
+    #{'name':'optimizer', 'n':2, 'type':'list','list':['RMSProp','Adam']}
+    #{'name':'gamma','n':3,'type':'parametric','method':'grid','min':0.7,'max':0.9}
 ]
 
 
@@ -106,9 +120,8 @@ import Environment
 ######################################################################
 
 class Parameters():
-    def __init__(self,set_param,path_code=path_code):
+    def __init__(self):
         self.set=None
-        self.add_json(set_param,path_code)
 
     def add_dict(self,dict_param):
         for key,value in dict_param.items():
@@ -145,24 +158,29 @@ class Sim():
         self.path_save=path_save
 
         # Setup parameters in Parmeters object
-        self.param=Parameters(set_param_sim,path_code)
-        self.param.add_json(set_param_mod,path_code)
-        self.param.add_dict({'datetime_start':datetime_start, 'path_save':path_save_run})
+        self.param=Parameters()
+
         if set_param_overwrite is not None:
-            self.param.add_dict(set_param_overwrite)
-        if dir_load is not None:
-            '''
+            if 'dir_load' in set_param_overwrite.keys():
+                dir_load=set_param_overwrite['dir_load']
+
+        # Inherit param_mod contents of previous run when dir_load is specified globally, or included as a batch parameter
+        # param_sim contents are not inherited and overwritten by those defined globally
+        if dir_load is None:
+            self.param.add_json(set_param_sim,path_code)
+            self.param.add_json(set_param_mod,path_code)
+            self.param.add_dict({'load_model':0,'dir_load':''})
+        else:
             with open(os.path.join(path_save,dir_load,"parameters.json")) as f:
                 dict_param=json.load(f)
-            episode_done=dict_param['episode_stop']
-            episode_stop=episode_done+self.param.episode_stop
-            print('episode_stop='+str(episode_done)+'+'+str(self.param.episode_stop))
-            self.param.add_dict({'load_model':1,'dir_load':dir_load,'episode_stop':episode_stop})
-            '''
+            self.param.add_dict(dict_param)
+            self.param.add_json(set_param_sim,path_code)
             self.param.add_dict({'load_model':1,'dir_load':dir_load})
-        else:
-            self.param.add_dict({'load_model':0})
 
+        self.param.add_dict({'datetime_start':datetime_start, 'path_save':path_save_run})
+        
+        if set_param_overwrite is not None:
+            self.param.add_dict(set_param_overwrite)
 
         # Make directories for saving
         if not os.path.exists(self.param.path_save):
@@ -275,7 +293,7 @@ class Sim():
             elif self.param.environment == 'Dual_Assignment_with_Hold':
                 env_alias=Environment.Dual_Assignment_with_Hold
             # Generate master network
-            self.master_network = Network.LSTM_RNN_Network(self.param,
+            self.master_network = Network.LSTM_RNN(self.param,
                                                            env_alias(self.param.config_environment).n_actions,
                                                            'master',None) 
             #n_agents = multiprocessing.cpu_count() # Set agents to number of available CPU threads
@@ -334,14 +352,14 @@ class Sim():
 
 class Batch():
     def __init__(self,param_batch=param_batch,path_save=path_save,
-                 dir_restart=dir_restart):
-        if dir_restart is None:
+                 batch_restart=batch_restart):
+        if batch_restart is None:
             self.prep(param_batch=param_batch,path_save=path_save)
         else:
-            self.prep_restart(dir_restart=dir_restart,path_save=path_save)
+            self.prep_restart(batch_restart=batch_restart,path_save=path_save)
 
-    def prep_restart(self,dir_restart,path_save):
-        self.path_save_batch=os.path.join(path_save,dir_restart)
+    def prep_restart(self,batch_restart,path_save):
+        self.path_save_batch=os.path.join(path_save,batch_restart)
         if os.path.exists(os.path.join(self.path_save_batch,"batch_table.h5")):
             with pd.HDFStore(os.path.join(self.path_save_batch,"batch_table.h5")) as hdf:
                 self.batch_table = pd.DataFrame(hdf['batch_table'])
@@ -360,7 +378,7 @@ class Batch():
             self.save_batch_table()
             print('Done batch setup in restarting mode.')
         else:
-            print('dir_restart not found: '+dir_restart)
+            print('batch_restart not found: '+batch_restart)
 
     def prep(self,param_batch=param_batch,path_save=path_save):
         self.n_param=len(param_batch)
